@@ -20,12 +20,13 @@ def process_data(gui):
         return
 
     alat_terpilih = gui.alat_var.get()
+    
     file_paths = [os.path.join(folder_path, file) for file in os.listdir(folder_path) if file.endswith('.csv')]
     if not file_paths:
         messagebox.showinfo("Info", "Tidak ada file CSV ditemukan di folder: " + folder_path)
         return
 
-    gui.data_frames = []
+    gui.data_frames = [] # inisialisasi data_frames
     for file_path in file_paths:
         try:
             if alat_terpilih == 1:

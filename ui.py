@@ -39,7 +39,7 @@ class UIMainApp:
 
         ttk.Button(
             self.frame,
-            text="UV-Vis DRS",
+            text="UV-Vis DRS (soon)",
             image=self.uvvis_drs_icon,
             compound="left",
             command=self.open_uvvis_drs,
@@ -48,7 +48,7 @@ class UIMainApp:
 
         ttk.Button(
             self.frame,
-            text="FTIR",
+            text="FTIR (soon)",
             image=self.ftir_icon,
             compound="left",
             command=self.open_ftir,
@@ -57,7 +57,7 @@ class UIMainApp:
 
         ttk.Button(
             self.frame,
-            text="SEM",
+            text="SEM (soon)",
             image=self.sem_icon,
             compound="left",
             command=self.open_sem,
