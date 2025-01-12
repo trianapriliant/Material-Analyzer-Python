@@ -11,7 +11,7 @@ Material Analyzer Python is a Python-based application for analyzing material da
 ## Installation
 1. Clone this repository:
    ```bash
-   git clone https://github.com/username/Material_Analyzer_Python.git
+   git clone https://github.com/trianapriliant/Material-Analyzer-Python.git
    ```
 
 2. Navigate to the project directory:
