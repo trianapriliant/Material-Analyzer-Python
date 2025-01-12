@@ -7,7 +7,7 @@ class UVVisGUI:
     def __init__(self, root):
         self.root = root
         self.root.withdraw()
-        self.root.title("Absorbance Plot UV-Vis")
+        self.root.title("UV-Vis Analyzer")
         self.data_frames = None
         self.degradasi_values = None
         self.canvas = None
@@ -23,6 +23,7 @@ class UVVisGUI:
 
         self.loading_progress = 0
         self.update_progress()
+        self.root.protocol("WM_DELETE_WINDOW", self.on_close)
 
     def update_progress(self):
         if self.loading_progress <= 100:
@@ -112,9 +113,7 @@ class UVVisGUI:
             font=("Segoe UI Emoji", 8),
             fg="gray"
         )
-        credit_label.grid(row=2, column=0, padx=10, pady=5, sticky="w")
-
-        self.root.protocol("WM_DELETE_WINDOW", self.on_close)
+        credit_label.grid(row=2, column=0, padx=10, pady=5, sticky="nsew")
 
     def select_folder(self):
         folder = filedialog.askdirectory()
@@ -141,7 +140,7 @@ class UVVisGUI:
             self.sample_names_entry.config(fg="grey")
 
     def on_close(self):
-        self.root.quit()
+        self.root.destroy()
 
     def process_data(self):
         from .processing import process_data
