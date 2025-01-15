@@ -28,7 +28,7 @@ def kinetika_degradasi(gui):
     fig, ax = plt.subplots()
     ax.scatter(waktu, abs_max_values, label='Data Eksperimen')
     ax.plot(waktu, model_kinetika(waktu, k, C0), label=f'Fitting: k={k:.4f}, C0={C0:.2f}', color='red')
-    ax.set_xlabel('Waktu (jam)')
+    ax.set_xlabel('Waktu (Jam)')
     ax.set_ylabel('Absorbansi Maksimum')
     ax.set_title('Kinetika Degradasi')
     ax.legend()
@@ -65,7 +65,7 @@ def konsentrasi_relatif(gui):
 
     fig, ax = plt.subplots()
     ax.plot(range(len(konsentrasi_rel)), konsentrasi_rel, marker='o', label='Konsentrasi Relatif')
-    ax.set_xlabel('Waktu (jam)')
+    ax.set_xlabel('Waktu (Jam)')
     ax.set_ylabel('Konsentrasi Relatif')
     ax.set_title('Konsentrasi Relatif')
     ax.legend()

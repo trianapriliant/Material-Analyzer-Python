@@ -101,7 +101,8 @@ class UIMainApp:
 
     def open_sem(self):
         """Buka modul SEM"""
-        # Implementasi modul SEM di sini
+        sem_window = tk.Toplevel(self.root)
+        SEMGUI(sem_window)
         pass
 
 if __name__ == "__main__":

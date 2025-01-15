@@ -22,7 +22,7 @@ def plot_graph(gui, show_absorbance=True):
             ax.plot(df['Lambda'], df['Transmitansi'], label=f"{gui.sample_names_var.get().split(',')[i].strip()} (Transmitansi)")
 
     if gui.show_degradasi.get():
-        degradasi_text = '\n'.join([f'% Degradasi {gui.sample_names_var.get().split(",")[0].strip()} ke {gui.sample_names_var.get().split(",")[i+1].strip()} Jam: {gui.degradasi_values[i]:.2f}%'
+        degradasi_text = '\n'.join([f'% Degradasi {gui.sample_names_var.get().split(",")[0].strip()} ke {gui.sample_names_var.get().split(",")[i+1].strip()} : {gui.degradasi_values[i]:.2f}%'
                                    for i in range(len(gui.degradasi_values))])
         ax.text(0.05, 0.95, degradasi_text, transform=ax.transAxes,
                 fontsize=8, color='black', ha='left', va='top', bbox=dict(facecolor='white', edgecolor='black', boxstyle='round,pad=0.25'))
