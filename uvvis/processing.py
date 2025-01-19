@@ -1,24 +1,6 @@
 import os
 import pandas as pd
 from tkinter import messagebox
-import sqlite3
-from datetime import datetime
-
-def save_to_database(sample_name, wavelength, absorbance):
-    """
-    Menyimpan data UV-Vis ke database.
-    """
-    conn = sqlite3.connect('database/materials.db')
-    cursor = conn.cursor()
-
-    # Simpan data ke tabel uvvis_data
-    cursor.execute('''
-        INSERT INTO uvvis_data (sample_name, wavelength, absorbance)
-        VALUES (?, ?, ?)
-    ''', (sample_name, wavelength, absorbance))
-
-    conn.commit()
-    conn.close()
 
 def process_data(gui):
     folder_path = gui.folder_path_var.get()
@@ -69,11 +51,6 @@ def process_data(gui):
             df['Absorbansi'] = pd.to_numeric(df['Absorbansi'], errors='coerce')
             df['Transmitansi'] = 10 ** (-df['Absorbansi'])
             gui.data_frames.append(df)
-
-            # Simpan data ke database
-            sample_name = sample_names[file_paths.index(file_path)]  # Ambil nama sampel sesuai urutan file
-            for _, row in df.iterrows():
-                save_to_database(sample_name, row['Lambda'], row['Absorbansi'])
 
         except Exception as e:
             messagebox.showerror("Error", f"Gagal membaca file {file_path}: {str(e)}")
