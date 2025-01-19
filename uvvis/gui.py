@@ -66,7 +66,7 @@ class UVVisGUI:
         # Folder Path
         tk.Label(input_frame, text="Folder Path:").grid(row=row, column=0, padx=5, pady=2, sticky="w")
         self.folder_path_var = tk.StringVar()
-        self.folder_path_entry = tk.Entry(input_frame, textvariable=self.folder_path_var, width=30, fg="grey")
+        self.folder_path_entry = tk.Entry(input_frame, textvariable=self.folder_path_var, width=35, fg="grey")
         self.folder_path_entry.grid(row=row, column=1, padx=5, pady=2, sticky="w")
         self.folder_path_entry.insert(0, "folder berisi file-file csv")
         self.folder_path_entry.bind("<FocusIn>", self.on_entry_click_folder)
@@ -77,9 +77,9 @@ class UVVisGUI:
         # Sample Names
         tk.Label(input_frame, text="Sample Names:").grid(row=row, column=0, padx=5, pady=2, sticky="w")
         self.sample_names_var = tk.StringVar()
-        self.sample_names_entry = tk.Entry(input_frame, textvariable=self.sample_names_var, width=30, fg="grey")
+        self.sample_names_entry = tk.Entry(input_frame, textvariable=self.sample_names_var, width=35, fg="grey")
         self.sample_names_entry.grid(row=row, column=1, padx=5, pady=2, sticky="w")
-        self.sample_names_entry.insert(0, "pisahkan nama-nama sampel dengan koma")
+        self.sample_names_entry.insert(0, "pisahkan nama sampel dengan koma")
         self.sample_names_entry.bind("<FocusIn>", self.on_entry_click)
         self.sample_names_entry.bind("<FocusOut>", self.on_focus_out)
         row += 1
@@ -87,7 +87,7 @@ class UVVisGUI:
         # Graph Title
         tk.Label(input_frame, text="Graph Title:").grid(row=row, column=0, padx=5, pady=2, sticky="w")
         self.graph_title_var = tk.StringVar()
-        tk.Entry(input_frame, textvariable=self.graph_title_var, width=30).grid(row=row, column=1, padx=5, pady=2, sticky="w")
+        tk.Entry(input_frame, textvariable=self.graph_title_var, width=35).grid(row=row, column=1, padx=5, pady=2, sticky="w")
         row += 1
 
         # Pilih Alat
@@ -122,7 +122,7 @@ class UVVisGUI:
         self.show_degradasi = tk.IntVar(value=1)
         tk.Checkbutton(input_frame, text="% Degradasi", variable=self.show_degradasi).grid(row=row, column=0, padx=5, pady=2, sticky="w")
         self.show_peak_points = tk.IntVar(value=1)
-        tk.Checkbutton(input_frame, text="Titik Puncak", variable=self.show_peak_points).grid(row=row, column=1, padx=5, pady=2, sticky="w")
+        tk.Checkbutton(input_frame, text="Titik Puncak", variable=self.show_peak_points).grid(row=row, column=1, padx=5, pady=2, sticky="ew")
         self.show_legend = tk.IntVar(value=1)
         tk.Checkbutton(input_frame, text="Legend", variable=self.show_legend).grid(row=row, column=2, padx=5, pady=2, sticky="w")
         row += 1
@@ -159,13 +159,13 @@ class UVVisGUI:
             self.folder_path_entry.config(fg="grey")
 
     def on_entry_click(self, event):
-        if self.sample_names_entry.get() == "pisahkan nama-nama sampel dengan koma":
+        if self.sample_names_entry.get() == "pisahkan nama sampel dengan koma":
             self.sample_names_entry.delete(0, "end")
             self.sample_names_entry.config(fg="black")
 
     def on_focus_out(self, event):
         if self.sample_names_entry.get() == "":
-            self.sample_names_entry.insert(0, "pisahkan nama-nama sampel dengan koma")
+            self.sample_names_entry.insert(0, "pisahkan nama sampel dengan koma")
             self.sample_names_entry.config(fg="grey")
 
     def on_close(self):

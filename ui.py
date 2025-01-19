@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import ttk, font, PhotoImage
 from uvvis.gui import UVVisGUI
+from sem.gui import SEMGUI
 # Impor modul GUI untuk analisis lain (UVVisDRS, FTIR, SEM) di sini
 
 class UIMainApp:
