@@ -71,7 +71,7 @@ class UVVisGUI:
         self.folder_path_entry.insert(0, "folder berisi file-file csv")
         self.folder_path_entry.bind("<FocusIn>", self.on_entry_click_folder)
         self.folder_path_entry.bind("<FocusOut>", self.on_focus_out_folder)
-        tk.Button(input_frame, text="Browse", command=self.select_folder).grid(row=row, column=2, padx=5, pady=2, sticky="w")
+        tk.Button(input_frame, text="Buka Folder", command=self.select_folder).grid(row=row, column=2, padx=5, pady=2, sticky="w")
         row += 1
 
         # Sample Names
@@ -93,15 +93,15 @@ class UVVisGUI:
         # Pilih Alat
         tk.Label(input_frame, text="Pilih Alat:").grid(row=row, column=0, padx=5, pady=2, sticky="w")
         self.alat_var = tk.IntVar(value=1)
-        tk.Radiobutton(input_frame, text="Alat Lama", variable=self.alat_var, value=1).grid(row=row, column=1, padx=5, pady=2, sticky="w")
-        tk.Radiobutton(input_frame, text="Alat Baru", variable=self.alat_var, value=2).grid(row=row, column=2, padx=5, pady=2, sticky="w")
+        tk.Radiobutton(input_frame, text="Alat Lama", variable=self.alat_var, value=1).grid(row=row, column=1, padx=0, pady=2, sticky="w")
+        tk.Radiobutton(input_frame, text="Alat Baru", variable=self.alat_var, value=2).grid(row=row, column=2, padx=0, pady=2, sticky="w")
         row += 1
 
         # Pilih Jenis Grafik
         tk.Label(input_frame, text="Pilih Jenis Grafik:").grid(row=row, column=0, padx=5, pady=2, sticky="w")
         self.plot_type = tk.IntVar(value=1)
-        tk.Radiobutton(input_frame, text="Absorbansi", variable=self.plot_type, value=1).grid(row=row, column=1, padx=5, pady=2, sticky="w")
-        tk.Radiobutton(input_frame, text="Transmitansi", variable=self.plot_type, value=2).grid(row=row, column=2, padx=5, pady=2, sticky="w")
+        tk.Radiobutton(input_frame, text="Absorbansi", variable=self.plot_type, value=1).grid(row=row, column=1, padx=0, pady=2, sticky="w")
+        tk.Radiobutton(input_frame, text="Transmitansi", variable=self.plot_type, value=2).grid(row=row, column=2, padx=0, pady=2, sticky="w")
         row += 1
 
         # Lebar Grafik

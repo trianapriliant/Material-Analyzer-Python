@@ -12,32 +12,42 @@ def kinetika_degradasi(gui):
     sample_names = gui.sample_names_var.get().split(',')
     sample_names = [name.strip() for name in sample_names if name.strip()]
 
+    # Ambil nilai absorbansi maksimum untuk setiap waktu
     abs_max_values = [df['Absorbansi'].max() for df in gui.data_frames]
-    waktu = np.arange(0, len(abs_max_values))
+    A0 = abs_max_values[0]  # Absorbansi awal
+    waktu = np.arange(0, len(abs_max_values))  # Waktu (indeks)
 
-    def model_kinetika(t, k, C0):
-        return C0 * np.exp(-k * t)
+    # Hitung ln(A0/At)
+    ln_A0_At = np.log(A0 / np.array(abs_max_values))
+
+    # Model fitting: y = k * t + C
+    def model_kinetika(t, k, C):
+        return k * t + C
 
     try:
-        popt, _ = curve_fit(model_kinetika, waktu, abs_max_values, p0=[0.1, abs_max_values[0]])
-        k, C0 = popt
+        # Lakukan fitting data
+        popt, _ = curve_fit(model_kinetika, waktu, ln_A0_At, p0=[0.1, 0])
+        k, C = popt  # k adalah konstanta laju degradasi, C adalah konstanta
     except Exception as e:
         messagebox.showerror("Error", f"Gagal melakukan fitting data: {str(e)}")
         return
 
+    # Buat grafik
     fig, ax = plt.subplots()
-    ax.scatter(waktu, abs_max_values, label='Data Eksperimen')
-    ax.plot(waktu, model_kinetika(waktu, k, C0), label=f'Fitting: k={k:.4f}, C0={C0:.2f}', color='red')
+    ax.scatter(waktu, ln_A0_At, label='Data Eksperimen (ln(A₀/Aₜ))')
+    ax.plot(waktu, model_kinetika(waktu, k, C), label=f'Fitting: k={k:.4f}, C={C:.2f}', color='red')
     ax.set_xlabel('Waktu (Jam)')
-    ax.set_ylabel('Absorbansi Maksimum')
+    ax.set_ylabel('ln(A₀/Aₜ)')
     ax.set_title('Kinetika Degradasi')
     ax.legend()
     ax.grid(True)
 
-    persamaan = f"Persamaan Kinetika:\nC(t) = {C0:.2f} * e^(-{k:.4f} * t)"
+    # Tampilkan persamaan fitting
+    persamaan = f"Persamaan Kinetika:\nln(A₀/Aₜ) = {k:.4f} * t + {C:.2f}"
     ax.text(0.05, 0.95, persamaan, transform=ax.transAxes, fontsize=10, color='blue',
             ha='left', va='top', bbox=dict(facecolor='white', edgecolor='black', boxstyle='round,pad=0.5'))
 
+    # Tampilkan grafik di GUI
     if gui.canvas:
         gui.canvas.get_tk_widget().pack_forget()
     if gui.toolbar:
