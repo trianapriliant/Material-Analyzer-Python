@@ -51,69 +51,98 @@ class UVVisGUI:
         eksport_menu.add_command(label="Eksport Gambar", command=self.eksport_gambar)
         eksport_menu.add_command(label="Export Report", command=self.export_report)
 
-        input_frame = tk.Frame(self.root)
-        input_frame.grid(row=0, column=0, padx=10, pady=5, sticky="w")
+        # Atur weight untuk kolom dan baris
+        self.root.grid_columnconfigure(0, weight=1)  # Kolom untuk input_frame
+        self.root.grid_columnconfigure(1, weight=4)  # Kolom untuk graph_frame
+        self.root.grid_rowconfigure(0, weight=1)     # Baris untuk input_frame dan graph_frame
 
-        tk.Label(input_frame, text="Folder Path:").grid(row=0, column=0, padx=5, pady=2, sticky="w")
+        # Frame untuk input dan preferensi
+        input_frame = tk.Frame(self.root)
+        input_frame.grid(row=0, column=0, padx=10, pady=5, sticky="nsew")
+
+        # Susun elemen-elemen secara vertikal di input_frame
+        row = 0
+
+        # Folder Path
+        tk.Label(input_frame, text="Folder Path:").grid(row=row, column=0, padx=5, pady=2, sticky="w")
         self.folder_path_var = tk.StringVar()
-        self.folder_path_entry = tk.Entry(input_frame, textvariable=self.folder_path_var, width=40, fg="grey")
-        self.folder_path_entry.grid(row=0, column=1, padx=5, pady=2)
+        self.folder_path_entry = tk.Entry(input_frame, textvariable=self.folder_path_var, width=30, fg="grey")
+        self.folder_path_entry.grid(row=row, column=1, padx=5, pady=2, sticky="w")
         self.folder_path_entry.insert(0, "folder berisi file-file csv")
         self.folder_path_entry.bind("<FocusIn>", self.on_entry_click_folder)
         self.folder_path_entry.bind("<FocusOut>", self.on_focus_out_folder)
-        tk.Button(input_frame, text="Browse", command=self.select_folder).grid(row=0, column=2, padx=5, pady=2)
+        tk.Button(input_frame, text="Browse", command=self.select_folder).grid(row=row, column=2, padx=5, pady=2, sticky="w")
+        row += 1
 
-        tk.Label(input_frame, text="Sample Names:").grid(row=1, column=0, padx=5, pady=2, sticky="w")
+        # Sample Names
+        tk.Label(input_frame, text="Sample Names:").grid(row=row, column=0, padx=5, pady=2, sticky="w")
         self.sample_names_var = tk.StringVar()
-        self.sample_names_entry = tk.Entry(input_frame, textvariable=self.sample_names_var, width=40, fg="grey")
-        self.sample_names_entry.grid(row=1, column=1, padx=5, pady=2)
+        self.sample_names_entry = tk.Entry(input_frame, textvariable=self.sample_names_var, width=30, fg="grey")
+        self.sample_names_entry.grid(row=row, column=1, padx=5, pady=2, sticky="w")
         self.sample_names_entry.insert(0, "pisahkan nama-nama sampel dengan koma")
         self.sample_names_entry.bind("<FocusIn>", self.on_entry_click)
         self.sample_names_entry.bind("<FocusOut>", self.on_focus_out)
+        row += 1
 
-        tk.Label(input_frame, text="Graph Title:").grid(row=2, column=0, padx=5, pady=2, sticky="w")
+        # Graph Title
+        tk.Label(input_frame, text="Graph Title:").grid(row=row, column=0, padx=5, pady=2, sticky="w")
         self.graph_title_var = tk.StringVar()
-        tk.Entry(input_frame, textvariable=self.graph_title_var, width=40).grid(row=2, column=1, padx=5, pady=2)
+        tk.Entry(input_frame, textvariable=self.graph_title_var, width=30).grid(row=row, column=1, padx=5, pady=2, sticky="w")
+        row += 1
 
-        tk.Label(input_frame, text="Pilih Alat:").grid(row=3, column=0, padx=5, pady=2, sticky="w")
+        # Pilih Alat
+        tk.Label(input_frame, text="Pilih Alat:").grid(row=row, column=0, padx=5, pady=2, sticky="w")
         self.alat_var = tk.IntVar(value=1)
-        tk.Radiobutton(input_frame, text="Alat Lama", variable=self.alat_var, value=1).grid(row=3, column=1, padx=5, pady=2, sticky="w")
-        tk.Radiobutton(input_frame, text="Alat Baru", variable=self.alat_var, value=2).grid(row=3, column=2, padx=5, pady=2, sticky="w")
+        tk.Radiobutton(input_frame, text="Alat Lama", variable=self.alat_var, value=1).grid(row=row, column=1, padx=5, pady=2, sticky="w")
+        tk.Radiobutton(input_frame, text="Alat Baru", variable=self.alat_var, value=2).grid(row=row, column=2, padx=5, pady=2, sticky="w")
+        row += 1
 
-        tk.Label(input_frame, text="Pilih Jenis Grafik:").grid(row=4, column=0, padx=5, pady=0, sticky="w")
+        # Pilih Jenis Grafik
+        tk.Label(input_frame, text="Pilih Jenis Grafik:").grid(row=row, column=0, padx=5, pady=2, sticky="w")
         self.plot_type = tk.IntVar(value=1)
-        tk.Radiobutton(input_frame, text="Absorbansi", variable=self.plot_type, value=1).grid(row=4, column=1, padx=5, pady=0, sticky="w")
-        tk.Radiobutton(input_frame, text="Transmitansi", variable=self.plot_type, value=2).grid(row=4, column=2, padx=5, pady=0, sticky="w")
+        tk.Radiobutton(input_frame, text="Absorbansi", variable=self.plot_type, value=1).grid(row=row, column=1, padx=5, pady=2, sticky="w")
+        tk.Radiobutton(input_frame, text="Transmitansi", variable=self.plot_type, value=2).grid(row=row, column=2, padx=5, pady=2, sticky="w")
+        row += 1
 
-        tk.Label(input_frame, text="Lebar Grafik:").grid(row=5, column=0, padx=5, pady=2, sticky="w")
-        self.fig_width_scale = tk.Scale(input_frame, from_=4, to=20, orient="horizontal")
+        # Lebar Grafik
+        tk.Label(input_frame, text="Lebar Grafik:").grid(row=row, column=0, padx=5, pady=2, sticky="w")
+        self.fig_width_scale = tk.Scale(input_frame, from_=4, to=20, orient="horizontal", length=150)
         self.fig_width_scale.set(8)
-        self.fig_width_scale.grid(row=5, column=1, padx=5, pady=2, sticky="w")
+        self.fig_width_scale.grid(row=row, column=1, padx=5, pady=2, sticky="w")
+        row += 1
 
-        tk.Label(input_frame, text="Tinggi Grafik:").grid(row=5, column=2, padx=5, pady=2, sticky="w")
-        self.fig_height_scale = tk.Scale(input_frame, from_=2, to=16, orient="horizontal")
+        # Tinggi Grafik
+        tk.Label(input_frame, text="Tinggi Grafik:").grid(row=row, column=0, padx=5, pady=2, sticky="w")
+        self.fig_height_scale = tk.Scale(input_frame, from_=2, to=16, orient="horizontal", length=150)
         self.fig_height_scale.set(4)
-        self.fig_height_scale.grid(row=5, column=3, padx=5, pady=2, sticky="w")
+        self.fig_height_scale.grid(row=row, column=1, padx=5, pady=2, sticky="w")
+        row += 1
 
+        # Checkbuttons
         self.show_degradasi = tk.IntVar(value=1)
-        tk.Checkbutton(input_frame, text="% Degradasi", variable=self.show_degradasi).grid(row=6, column=0, sticky="ew", padx=2, pady=2)
+        tk.Checkbutton(input_frame, text="% Degradasi", variable=self.show_degradasi).grid(row=row, column=0, padx=5, pady=2, sticky="w")
         self.show_peak_points = tk.IntVar(value=1)
-        tk.Checkbutton(input_frame, text="Titik Puncak", variable=self.show_peak_points).grid(row=6, column=1, sticky="ew", padx=2, pady=2)
+        tk.Checkbutton(input_frame, text="Titik Puncak", variable=self.show_peak_points).grid(row=row, column=1, padx=5, pady=2, sticky="w")
         self.show_legend = tk.IntVar(value=1)
-        tk.Checkbutton(input_frame, text="Legend", variable=self.show_legend).grid(row=6, column=2, sticky="ew", padx=2, pady=2)
+        tk.Checkbutton(input_frame, text="Legend", variable=self.show_legend).grid(row=row, column=2, padx=5, pady=2, sticky="w")
+        row += 1
 
-        tk.Button(input_frame, text="Process Data", command=self.process_data).grid(row=9, column=0, columnspan=4, pady=5)
+        # Tombol Process Data
+        tk.Button(input_frame, text="Process Data", command=self.process_data).grid(row=row, column=0, columnspan=3, pady=10)
+        row += 1
 
+        # Frame untuk grafik
         self.graph_frame = tk.Frame(self.root)
-        self.graph_frame.grid(row=1, column=0, padx=10, pady=5, sticky="nsew")
+        self.graph_frame.grid(row=0, column=1, padx=10, pady=5, sticky="nsew")
 
+        # Credit Label
         credit_label = tk.Label(
             self.root,
             text="v1.5 - under development | made with ❤️ by rynn ~ personal use for physics of materials",
             font=("Segoe UI Emoji", 8),
             fg="gray"
         )
-        credit_label.grid(row=2, column=0, padx=10, pady=5, sticky="nsew")
+        credit_label.grid(row=1, column=0, columnspan=2, padx=10, pady=5, sticky="nsew")
 
     def select_folder(self):
         folder = filedialog.askdirectory()
