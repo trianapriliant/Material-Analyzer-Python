@@ -7,8 +7,10 @@ __pycache__/
 # Ignore virtual environment
 env/
 
-# Ignore output files
+# Ignore output files and build apps
 output/
+dist/
+build/
 
 # Ignore IDE-specific files
 .vscode/
@@ -23,3 +25,6 @@ Thumbs.db
 
 # Ignore local configuration files
 *.local
+
+# Ignore spec app
+*.spec

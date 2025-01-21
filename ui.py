@@ -45,7 +45,7 @@ class UIMainApp:
 
         ttk.Button(
             self.frame,
-            text="UV-Vis-DRS (otw slur)",
+            text="UV-Vis-DRS (otw fren)",
             image=self.uvvis_drs_icon,
             compound="top",
             command=self.open_uvvis_drs,
@@ -54,7 +54,7 @@ class UIMainApp:
 
         ttk.Button(
             self.frame,
-            text="FTIR (otw slur)",
+            text="FTIR (otw fren)",
             image=self.ftir_icon,
             compound="top",
             command=self.open_ftir,
