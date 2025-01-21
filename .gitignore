@@ -29,3 +29,6 @@ Thumbs.db
 
 # Ignore spec app
 *.spec
+
+# Ignore rar
+*.rar
