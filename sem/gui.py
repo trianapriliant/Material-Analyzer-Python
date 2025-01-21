@@ -1,62 +1,120 @@
 import tkinter as tk
-from tkinter import ttk, filedialog, messagebox
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
+from tkinter import filedialog, messagebox
+from tkinter import ttk
+import cv2
+from PIL import Image, ImageTk
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import matplotlib.pyplot as plt
+from sem.analysis import process_and_analyze
 
 class SEMGUI:
     def __init__(self, root):
         self.root = root
-        self.root.title("SEM Analyzer")
-        self.root.geometry("800x600")
+        self.root.title("SEM Analysis GUI")
 
-        # Frame untuk input
-        self.input_frame = ttk.Frame(self.root)
-        self.input_frame.pack(pady=10)
+        # Variables
+        self.image_path = None
+        self.clustered_image = None
+        self.edges = None
+        self.properties = None
 
-        # Tombol untuk memuat data SEM
-        ttk.Button(self.input_frame, text="Load SEM Data", command=self.load_sem_data).pack(pady=10)
+        # UI Components
+        self.create_widgets()
 
-        # Frame untuk grafik
-        self.graph_frame = ttk.Frame(self.root)
-        self.graph_frame.pack(fill="both", expand=True)
+    def create_widgets(self):
+        # Frame for file selection
+        file_frame = ttk.Frame(self.root)
+        file_frame.pack(pady=10, padx=10, fill="x")
 
-        # Variabel untuk menyimpan data
-        self.sem_data = None
+        self.file_entry = ttk.Entry(file_frame, width=50)
+        self.file_entry.pack(side="left", padx=(0, 5), fill="x", expand=True)
 
-    def load_sem_data(self):
-        """Memuat data SEM dari file"""
-        file_path = filedialog.askopenfilename(filetypes=[("CSV Files", "*.csv"), ("All Files", "*.*")])
-        if not file_path:
+        browse_button = ttk.Button(file_frame, text="Browse", command=self.browse_file)
+        browse_button.pack(side="left")
+
+        process_button = ttk.Button(file_frame, text="Process", command=self.process_image)
+        process_button.pack(side="left", padx=5)
+
+        # Canvas for displaying images
+        self.image_canvas = tk.Canvas(self.root, width=800, height=400, bg="white")
+        self.image_canvas.pack(pady=10)
+
+        # Result display
+        self.result_text = tk.Text(self.root, height=10, wrap="word")
+        self.result_text.pack(pady=10, padx=10, fill="x")
+        self.result_text.insert("1.0", "Results will be displayed here...")
+        self.result_text.config(state="disabled")
+
+    def browse_file(self):
+        file_path = filedialog.askopenfilename(
+            filetypes=[("Image files", "*.jpg *.jpeg *.png *.bmp"), ("All files", "*.*")]
+        )
+        if file_path:
+            self.file_entry.delete(0, tk.END)
+            self.file_entry.insert(0, file_path)
+
+    def process_image(self):
+        self.image_path = self.file_entry.get()
+        if not self.image_path:
+            messagebox.showerror("Error", "Please select an image file.")
             return
 
         try:
-            # Proses data SEM (akan diimplementasikan di processing.py)
-            from .processing import process_sem_data
-            self.sem_data = process_sem_data(file_path)
-            messagebox.showinfo("Success", "Data SEM berhasil dimuat!")
-            self.plot_sem_data()  # Plot data setelah berhasil dimuat
+            # Process the image using analysis module
+            self.clustered_image, self.edges, self.properties = process_and_analyze(
+                self.image_path, n_clusters=3, edge_method="canny", low_threshold=50, high_threshold=150
+            )
+
+            # Display results
+            self.display_images()
+            self.display_results()
+
+        except FileNotFoundError:
+            messagebox.showerror("Error", "The selected file was not found.")
+        except cv2.error as e:
+            messagebox.showerror("Error", f"OpenCV error: {e}")
         except Exception as e:
-            messagebox.showerror("Error", f"Gagal memuat data SEM: {str(e)}")
+            messagebox.showerror("Error", f"An unexpected error occurred: {e}")
 
-    def plot_sem_data(self):
-        """Plot data SEM"""
-        if self.sem_data is None:
-            return
+    def display_images(self):
+        # Load original image
+        original_image = cv2.imread(self.image_path, cv2.IMREAD_GRAYSCALE)
 
-        # Bersihkan frame grafik sebelumnya
-        for widget in self.graph_frame.winfo_children():
-            widget.destroy()
+        # Create a new figure for displaying results using matplotlib
+        fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(15, 5))
+        ax1.set_title("Original Image")
+        ax1.imshow(original_image, cmap="gray")
+        ax1.axis("off")
 
-        # Plot data SEM (akan diimplementasikan di plotting.py)
-        from .plotting import plot_sem_image
-        fig, ax = plot_sem_image(self.sem_data)
+        ax2.set_title("Clustered Image")
+        ax2.imshow(self.clustered_image, cmap="gray")
+        ax2.axis("off")
 
-        # Tampilkan grafik di GUI
-        self.canvas = FigureCanvasTkAgg(fig, master=self.graph_frame)
-        self.canvas.draw()
-        self.canvas.get_tk_widget().pack(fill="both", expand=True)
+        ax3.set_title("Edges")
+        ax3.imshow(self.edges, cmap="gray")
+        ax3.axis("off")
 
-        # Tambahkan toolbar navigasi
-        self.toolbar = NavigationToolbar2Tk(self.canvas, self.graph_frame)
-        self.toolbar.update()
-        self.canvas.get_tk_widget().pack()
+        # Embed the plot in the Tkinter GUI
+        canvas = FigureCanvasTkAgg(fig, master=self.root)
+        canvas.draw()
+        canvas.get_tk_widget().pack()
+
+    def display_results(self):
+        self.result_text.config(state="normal")
+        self.result_text.delete("1.0", tk.END)
+
+        if not self.properties:
+            self.result_text.insert("1.0", "No particles detected.")
+        else:
+            self.result_text.insert("1.0", "Detected Particles:\n")
+            for i, prop in enumerate(self.properties):
+                self.result_text.insert(
+                    "end", f"Particle {i + 1}: Area = {prop['area']:.2f}, Diameter = {prop['equivalent_diameter']:.2f}\n"
+                )
+
+        self.result_text.config(state="disabled")
+
+if __name__ == "__main__":
+    root = tk.Tk()
+    SEMGUI(root)
+    root.mainloop()

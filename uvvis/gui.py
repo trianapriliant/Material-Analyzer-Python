@@ -5,6 +5,11 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolb
 
 class UVVisGUI:
     def __init__(self, root):
+        """
+        Konstruktor untuk membuat objek UVVisGUI yang akan menampilkan GUI UV-Vis Analyzer.
+        :param root: Root window yang akan digunakan sebagai parent window.
+        :type root: tkinter.Tk
+        """
         self.root = root
         self.root.withdraw()
         self.root.title("UV-Vis Analyzer")

@@ -36,7 +36,7 @@ class UIMainApp:
         # Tombol dengan ikon
         ttk.Button(
             self.frame,
-            text="UV-Vis",
+            text="UV-Vis (ini oke)",
             image=self.uvvis_icon,
             compound="top",  # Posisi ikon di atas teks
             command=self.open_uvvis,
@@ -45,7 +45,7 @@ class UIMainApp:
 
         ttk.Button(
             self.frame,
-            text="UV-Vis-DRS (soon)",
+            text="UV-Vis-DRS (otw slur)",
             image=self.uvvis_drs_icon,
             compound="top",
             command=self.open_uvvis_drs,
@@ -54,7 +54,7 @@ class UIMainApp:
 
         ttk.Button(
             self.frame,
-            text="FTIR (soon)",
+            text="FTIR (otw slur)",
             image=self.ftir_icon,
             compound="top",
             command=self.open_ftir,
@@ -63,7 +63,7 @@ class UIMainApp:
 
         ttk.Button(
             self.frame,
-            text="SEM (soon)",
+            text="SEM (waduh inimah)",
             image=self.sem_icon,
             compound="top",
             command=self.open_sem,
@@ -79,7 +79,7 @@ class UIMainApp:
         # Credit Label
         credit_label = ttk.Label(
             self.root,
-            text="v1.5 - under development | made with ❤️ by rynn ~ personal use for physics of materials",
+            text="v1.5.1 - under development | made with ❤️ by rynn ~ personal use for physics of materials",
             font=("Segoe UI Emoji", 8),
             foreground="gray"
         )
@@ -103,8 +103,8 @@ class UIMainApp:
     def open_sem(self):
         """Buka modul SEM"""
         sem_window = tk.Toplevel(self.root)
-        SEMGUI(sem_window)
-        pass
+        SEMGUI(sem_window)  # Menghubungkan ke antarmuka SEM
+
 
 if __name__ == "__main__":
     root = tk.Tk()
