@@ -43,6 +43,10 @@ class SEMGUI:
         set_scale_button = tk.Button(top_frame, text="Set Scale", command=self.set_scale, height=2)
         set_scale_button.pack(side="left", padx=5)
 
+        # Button for visualizing particle size distribution
+        visualize_button = tk.Button(top_frame, text="Visualize Particle Sizes", command=self.visualize_particle_sizes, height=2)
+        visualize_button.pack(side="left", padx=5)
+
         # Main frame for image display and results
         main_frame = tk.Frame(self.root)
         main_frame.pack(fill="both", expand=True, padx=10, pady=10)
@@ -236,6 +240,31 @@ class SEMGUI:
                     )
 
         self.result_text.config(state="disabled")
+
+    def visualize_particle_sizes(self):
+        if not self.properties:
+            messagebox.showerror("Error", "No particles detected. Please process an image first.")
+            return
+
+        # Extract particle diameters
+        if self.scale:
+            diameters = [prop['equivalent_diameter'] / self.scale for prop in self.properties]
+        else:
+            diameters = [prop['equivalent_diameter'] for prop in self.properties]
+
+        # Create a histogram of particle sizes
+        fig, ax = plt.subplots(figsize=(8, 6))
+        ax.hist(diameters, bins=20, color='blue', edgecolor='black')
+        ax.set_xlabel("Particle Size (units)")
+        ax.set_ylabel("Number of Particles")
+        ax.set_title("Particle Size Distribution")
+
+        # Display the histogram in a new window
+        histogram_window = tk.Toplevel(self.root)
+        histogram_window.title("Particle Size Distribution")
+        canvas = FigureCanvasTkAgg(fig, master=histogram_window)
+        canvas.draw()
+        canvas.get_tk_widget().pack(fill="both", expand=True)
 
 
 if __name__ == "__main__":
