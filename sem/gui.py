@@ -18,6 +18,10 @@ class SEMGUI:
         self.properties = None
         self.scale = None  # Skala piksel per unit jarak asli
         self.line_coords = None  # Koordinat garis yang digambar
+        self.current_line = None  # Garis yang sedang digambar
+        self.temp_line = None  # Garis sementara saat menggambar
+        self.canvas = None  # Referensi ke FigureCanvasTkAgg
+        self.ax = None  # Referensi ke axes untuk gambar original
 
         # Layout setup
         self.setup_ui()
@@ -123,25 +127,65 @@ class SEMGUI:
 
         # Connect the mouse click event to the canvas (only for original image)
         if frame == self.original_frame:
+            self.canvas = canvas
+            self.ax = ax
             canvas.mpl_connect("button_press_event", self.on_canvas_click)
+            canvas.mpl_connect("motion_notify_event", self.on_mouse_move)
 
     def on_canvas_click(self, event):
+        if event.inaxes != self.ax:
+            return  # Hanya tangani klik di dalam gambar
+
         if self.line_coords is None:
             self.line_coords = [(event.xdata, event.ydata)]
         else:
             self.line_coords.append((event.xdata, event.ydata))
             self.draw_line_on_canvas()
 
+    def on_mouse_move(self, event):
+        if event.inaxes != self.ax:
+            return  # Hanya tangani gerakan di dalam gambar
+
+        if self.line_coords and len(self.line_coords) == 1:
+            # Hapus garis sementara sebelumnya
+            if self.temp_line:
+                self.temp_line.remove()
+
+            # Gambar garis sementara
+            self.temp_line, = self.ax.plot(
+                [self.line_coords[0][0], event.xdata],
+                [self.line_coords[0][1], event.ydata],
+                color='red', linestyle='--'
+            )
+            self.canvas.draw()
+
     def draw_line_on_canvas(self):
         if len(self.line_coords) == 2:
-            # Draw the line on the original image tab
-            fig = self.original_frame.winfo_children()[0].figure
-            ax = fig.axes[0]
-            ax.plot([self.line_coords[0][0], self.line_coords[1][0]], [self.line_coords[0][1], self.line_coords[1][1]], color='red')
-            self.original_frame.winfo_children()[0].draw()
+            # Hapus garis sementara
+            if self.temp_line:
+                self.temp_line.remove()
+                self.temp_line = None
+
+            # Gambar garis permanen
+            if self.current_line:
+                self.current_line.remove()
+
+            self.current_line, = self.ax.plot(
+                [self.line_coords[0][0], self.line_coords[1][0]],
+                [self.line_coords[0][1], self.line_coords[1][1]],
+                color='red'
+            )
+            self.canvas.draw()
 
     def draw_scale_line(self):
         self.line_coords = None
+        if self.current_line:
+            self.current_line.remove()
+            self.current_line = None
+        if self.temp_line:
+            self.temp_line.remove()
+            self.temp_line = None
+        self.canvas.draw()
         messagebox.showinfo("Info", "Click on the image to draw a line for scale.")
 
     def set_scale(self):
