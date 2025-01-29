@@ -2,6 +2,20 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 
 def plot_graph(gui, show_absorbance=True):
+    """
+    Plot a graph of the data in the given GUI.
+
+    Parameters
+    ----------
+    gui : UVVisGUI
+        The GUI object containing the data to be plotted.
+    show_absorbance : bool, optional
+        Whether to plot absorbance or transmittance. Defaults to True.
+
+    Returns
+    -------
+    None
+    """
     if gui.canvas:
         gui.canvas.get_tk_widget().pack_forget()
     if gui.toolbar:
