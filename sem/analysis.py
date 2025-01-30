@@ -1,92 +1,92 @@
 import cv2
 import numpy as np
-from sem.processing import classify_brightness
+from sem.processing import classify_brightness, preprocess_image
 
 def detect_edges(image, method="canny", **kwargs):
-    """
-    Deteksi tepi pada gambar SEM menggunakan metode yang ditentukan.
+    try:
+        # Hapus dimensi tambahan jika ada
+        if len(image.shape) == 3 and image.shape[2] == 1:
+            image = np.squeeze(image, axis=2)
+        
+        # Validasi input
+        if image is None or len(image.shape) != 2:
+            raise ValueError("Input harus berupa gambar grayscale yang valid.")
+        
+        if method == "canny":
+            low_threshold = kwargs.get("low_threshold", 100)
+            high_threshold = kwargs.get("high_threshold", 200)
+            edges = cv2.Canny(image, low_threshold, high_threshold)
+        elif method == "sobel":
+            ksize = kwargs.get("ksize", 3)
+            grad_x = cv2.Sobel(image, cv2.CV_64F, 1, 0, ksize=ksize)
+            grad_y = cv2.Sobel(image, cv2.CV_64F, 0, 1, ksize=ksize)
+            edges = cv2.magnitude(grad_x, grad_y)
+            edges = np.uint8(np.clip(edges, 0, 255))
+        else:
+            raise ValueError("Metode deteksi tepi tidak dikenal. Gunakan 'canny' atau 'sobel'.")
+        
+        return edges
+    except Exception as e:
+        print(f"Error in detect_edges: {e}")
+        raise
 
-    Parameters:
-    - image: np.ndarray, gambar SEM (grayscale)
-    - method: str, metode deteksi tepi ("canny" atau "sobel")
-    - kwargs: parameter tambahan untuk metode yang dipilih
-
-    Returns:
-    - edges: np.ndarray, gambar dengan tepi yang terdeteksi
-    """
-    if method == "canny":
-        # Parameter default Canny: thresholds 100 dan 200 jika tidak disediakan
-        low_threshold = kwargs.get("low_threshold", 100)
-        high_threshold = kwargs.get("high_threshold", 200)
-        edges = cv2.Canny(image, low_threshold, high_threshold)
-    elif method == "sobel":
-        # Parameter default Sobel: gunakan kernel ukuran 3 jika tidak disediakan
-        ksize = kwargs.get("ksize", 3)
-        grad_x = cv2.Sobel(image, cv2.CV_64F, 1, 0, ksize=ksize)
-        grad_y = cv2.Sobel(image, cv2.CV_64F, 0, 1, ksize=ksize)
-        edges = cv2.magnitude(grad_x, grad_y)
-        edges = np.uint8(np.clip(edges, 0, 255))
-    else:
-        raise ValueError("Metode deteksi tepi tidak dikenal. Gunakan 'canny' atau 'sobel'.")
-
-    return edges
-
-def calculate_particle_properties(edges):
-    """
-    Hitung properti partikel berdasarkan gambar tepi (edges).
-
-    Parameters:
-    - edges: np.ndarray, gambar tepi hasil deteksi
-
-    Returns:
-    - properties: list of dict, daftar properti partikel (luas, diameter, dll.)
-    """
-    # Temukan kontur dari gambar tepi
-    contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-
-    properties = []
-    for contour in contours:
-        # Hitung luas kontur
-        area = cv2.contourArea(contour)
-
-        if area > 0:  # Hindari kontur dengan luas nol
-            # Hitung diameter ekuivalen (asumsi partikel lingkaran)
+def calculate_particle_properties(edges, min_area=50, min_circularity=0.7, pixel_to_um=1.0):
+    try:
+        contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        properties = []
+        for contour in contours:
+            area = cv2.contourArea(contour)
+            if area < min_area:
+                continue
+            
+            perimeter = cv2.arcLength(contour, True)
+            if perimeter == 0:
+                continue
+            circularity = (4 * np.pi * area) / (perimeter ** 2)
+            if circularity < min_circularity:
+                continue
+            
             equivalent_diameter = np.sqrt(4 * area / np.pi)
-
-            # Tambahkan properti ke daftar
+            area_um = area * (pixel_to_um ** 2)
+            diameter_um = equivalent_diameter * pixel_to_um
+            
             properties.append({
-                "area": area,
-                "equivalent_diameter": equivalent_diameter
+                "area": area_um,
+                "equivalent_diameter": diameter_um,
+                "circularity": circularity
             })
+        return properties
+    except Exception as e:
+        print(f"Error in calculate_particle_properties: {e}")
+        raise
 
-    return properties
-
-def process_and_analyze(image_path, n_clusters=3, edge_method="canny", **edge_kwargs):
-    """
-    Proses lengkap: klasifikasi brightness, deteksi tepi, dan analisis partikel.
-
-    Parameters:
-    - image_path: str, path ke file gambar SEM
-    - n_clusters: int, jumlah cluster brightness
-    - edge_method: str, metode deteksi tepi
-    - edge_kwargs: parameter tambahan untuk deteksi tepi
-
-    Returns:
-    - clustered_image: np.ndarray, gambar brightness yang diklasifikasikan
-    - edges: np.ndarray, gambar dengan tepi yang terdeteksi
-    - properties: list of dict, properti partikel
-    """
-    # Muat gambar dan klasifikasikan brightness
-    image = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
-    clustered_image, _ = classify_brightness(image, n_clusters=n_clusters)
-
-    # Deteksi tepi pada gambar brightness yang diklasifikasikan
-    edges = detect_edges(clustered_image, method=edge_method, **edge_kwargs)
-
-    # Analisis properti partikel
-    properties = calculate_particle_properties(edges)
-
-    return clustered_image, edges, properties
+def process_and_analyze(
+    image_path, n_clusters=3, edge_method="canny", 
+    min_area=50, min_circularity=0.7, pixel_to_um=1.0, **edge_kwargs
+):
+    try:
+        # Muat dan preproses gambar
+        preprocessed_image = preprocess_image(image_path)
+        print(f"Preprocessed image shape: {preprocessed_image.shape}")
+        
+        # Klasifikasi brightness
+        clustered_image, _ = classify_brightness(preprocessed_image, n_clusters=n_clusters)
+        print(f"Clustered image shape: {clustered_image.shape}")
+        
+        # Deteksi tepi pada gambar brightness yang diklasifikasikan
+        edges = detect_edges(clustered_image, method=edge_method, **edge_kwargs)
+        print(f"Edges image shape: {edges.shape}")
+        
+        # Analisis properti partikel
+        properties = calculate_particle_properties(
+            edges, min_area=min_area, min_circularity=min_circularity, pixel_to_um=pixel_to_um
+        )
+        print(f"Properties calculated: {len(properties)} particles detected.")
+        
+        return clustered_image, edges, properties
+    except Exception as e:
+        print(f"Error in process_and_analyze: {e}")
+        raise
 
 if __name__ == "__main__":
     # Contoh penggunaan modul

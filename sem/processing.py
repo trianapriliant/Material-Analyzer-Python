@@ -6,34 +6,60 @@ def classify_brightness(image, n_clusters=3):
     # Pastikan gambar dalam format grayscale
     if len(image.shape) == 3:
         image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-
+    
     # Reshape gambar menjadi array 1D untuk clustering
     pixels = image.reshape(-1, 1)
-
+    
     # Terapkan MiniBatchKMeans Clustering
-    kmeans = MiniBatchKMeans(n_clusters=n_clusters, random_state=42)  # Menggunakan MiniBatchKMeans
+    kmeans = MiniBatchKMeans(n_clusters=n_clusters, random_state=42)
     kmeans.fit(pixels)
-
+    
     # Rekonstruksi gambar berdasarkan hasil clustering
     clustered = kmeans.labels_.reshape(image.shape)
     clustered_image = np.uint8(kmeans.cluster_centers_)[clustered]
-
+    
+    # Pastikan output adalah 2D array
+    if len(clustered_image.shape) == 3 and clustered_image.shape[2] == 1:
+        clustered_image = np.squeeze(clustered_image, axis=2)
+    
+    #debugging
+    print(f"Clustered image shape after processing: {clustered_image.shape}")    
+    
     return clustered_image, np.sort(kmeans.cluster_centers_.flatten())
 
-def preprocess_image(image_path):
+
+def preprocess_image(image_path, blur_kernel=(5, 5), morph_kernel_size=3):
     """
     Muat gambar dan ubah ukurannya jika diperlukan.
-
+    
     Parameters:
-    - image_path: str, path ke file gambar SEM
-
+    - image_path: str, path ke file gambar SEM.
+    - blur_kernel: tuple, ukuran kernel untuk Gaussian Blur.
+    - morph_kernel_size: int, ukuran kernel untuk operasi morfologi.
+    
     Returns:
-    - image: np.ndarray, gambar SEM yang sudah dimuat
+    - binary_image: np.ndarray, gambar biner hasil preprocessing.
     """
-    image = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
+    # Baca gambar
+    image = cv2.imread(image_path)
     if image is None:
         raise ValueError(f"Gambar tidak ditemukan di path: {image_path}")
-    return image
+    
+    # Konversi ke grayscale jika gambar berwarna
+    if len(image.shape) == 3:  # Gambar berwarna (3 channel)
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    
+    # Gaussian Blur untuk mengurangi noise
+    blurred = cv2.GaussianBlur(image, blur_kernel, 0)
+    
+    # Thresholding menggunakan Otsu's Method
+    _, binary_image = cv2.threshold(blurred, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+    
+    # Operasi morfologi untuk membersihkan noise kecil
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (morph_kernel_size, morph_kernel_size))
+    cleaned_image = cv2.morphologyEx(binary_image, cv2.MORPH_OPEN, kernel)
+    print(f"Image shape after preprocessing: {image.shape}")
+    return cleaned_image
 
 if __name__ == "__main__":
     # Contoh penggunaan modul

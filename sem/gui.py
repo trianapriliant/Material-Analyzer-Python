@@ -82,18 +82,24 @@ class SEMGUI:
             title="Select an image",
             filetypes=[("Image files", "*.jpg *.jpeg *.png *.bmp"), ("All files", "*.*")]
         )
-
         if not file_path:
             messagebox.showerror("Error", "No file selected.")
             return
-
         self.image_path = file_path
-
+        
         try:
-            # Process image
-            self.clustered_image, self.edges, self.properties = process_and_analyze(
+            print(f"Selected image path: {file_path}")
+            
+            # Proses gambar
+            result = process_and_analyze(
                 self.image_path, n_clusters=3, edge_method="canny", low_threshold=50, high_threshold=150
             )
+            self.clustered_image, self.edges, self.properties = result
+            
+            print(f"Clustered image shape: {self.clustered_image.shape}")
+            print(f"Edges image shape: {self.edges.shape}")
+            
+            # Tampilkan gambar
             self.display_images()
             self.display_results()
         except Exception as e:
@@ -137,9 +143,8 @@ class SEMGUI:
             canvas.mpl_connect("motion_notify_event", self.on_mouse_move)
 
     def on_canvas_click(self, event):
-        if event.inaxes != self.ax:
+        if event.inaxes != self.ax or event.xdata is None or event.ydata is None:
             return  # Hanya tangani klik di dalam gambar
-
         if self.line_coords is None:
             self.line_coords = [(event.xdata, event.ydata)]
         else:
@@ -193,32 +198,43 @@ class SEMGUI:
         messagebox.showinfo("Info", "Click on the image to draw a line for scale.")
 
     def set_scale(self):
+        print("Setting scale...")
         if self.line_coords is None or len(self.line_coords) < 2:
             messagebox.showerror("Error", "Please draw a line first.")
             return
-
-        # Calculate the length of the line in pixels
+        
+        # Hitung panjang garis dalam piksel
         dx = self.line_coords[1][0] - self.line_coords[0][0]
         dy = self.line_coords[1][1] - self.line_coords[0][1]
         length_pixels = np.sqrt(dx**2 + dy**2)
-
-        # Ask user for the real-world distance
-        real_distance = simpledialog.askfloat("Input", "Enter the real-world distance corresponding to the line (in units):")
-        if real_distance is None or real_distance <= 0:
-            messagebox.showerror("Error", "Invalid distance entered.")
+        
+        # Minta pengguna memasukkan jarak dunia nyata dalam mikrometer
+        real_distance_um = simpledialog.askfloat(
+            "Input",
+            "Enter the real-world distance corresponding to the line (in micrometers):"
+        )
+        if real_distance_um is None or real_distance_um <= 0:
+            messagebox.showerror("Error", "Invalid distance entered. Please enter a positive value.")
             return
-
-        # Calculate the scale (pixels per unit)
-        self.scale = length_pixels / real_distance
-        messagebox.showinfo("Scale Set", f"Scale set to {self.scale:.2f} pixels per unit.")
-
-        # Update results with scaled measurements
+        
+        # Hitung skala dalam piksel per nanometer
+        real_distance_nm = real_distance_um * 1000  # Konversi mikrometer ke nanometer
+        self.scale = length_pixels / real_distance_nm  # Piksel per nanometer
+        
+        messagebox.showinfo("Scale Set", f"Scale set to {self.scale:.6f} pixels per nanometer.")
+        
+        # Update hasil analisis dengan skala baru
+        print("Updating results...")
         self.display_results()
+        print(f"Real-world distance: {real_distance_nm:.2f} nm")
+        print(f"Scale: {self.scale:.6f} pixels per nanometer")
 
     def display_results(self):
+        """
+        Menampilkan hasil analisis partikel di kotak teks dalam nanometer.
+        """
         self.result_text.config(state="normal")
         self.result_text.delete("1.0", tk.END)
-
         if not self.properties:
             self.result_text.insert("1.0", "No particles detected.")
         else:
@@ -227,39 +243,37 @@ class SEMGUI:
                 area = prop['area']
                 diameter = prop['equivalent_diameter']
                 if self.scale:
-                    area_scaled = area / (self.scale ** 2)
-                    diameter_scaled = diameter / self.scale
+                    # Konversi area dan diameter ke nanometer
+                    area_scaled = area / (self.scale ** 2)  # Area dalam nm^2
+                    diameter_scaled = diameter / self.scale  # Diameter dalam nm
                     self.result_text.insert(
                         "end",
-                        f"Particle {i + 1}: Area = {area_scaled:.2f} units^2, Diameter = {diameter_scaled:.2f} units\n"
+                        f"Particle {i + 1}: Area = {area_scaled:.2f} nm^2, Diameter = {diameter_scaled:.2f} nm\n"
                     )
                 else:
+                    # Tampilkan dalam piksel jika skala belum diatur
                     self.result_text.insert(
                         "end",
                         f"Particle {i + 1}: Area = {area:.2f} pixels^2, Diameter = {diameter:.2f} pixels\n"
                     )
-
+                
+                #debugging
+                if self.scale:
+                    print(f"Particle {i + 1}: Area = {area_scaled:.2f} nm^2, Diameter = {diameter_scaled:.2f} nm")
+                else:
+                    print(f"Particle {i + 1}: Area = {area:.2f} pixels^2, Diameter = {diameter:.2f} pixels")
         self.result_text.config(state="disabled")
 
     def visualize_particle_sizes(self):
         if not self.properties:
             messagebox.showerror("Error", "No particles detected. Please process an image first.")
             return
-
-        # Extract particle diameters
-        if self.scale:
-            diameters = [prop['equivalent_diameter'] / self.scale for prop in self.properties]
-        else:
-            diameters = [prop['equivalent_diameter'] for prop in self.properties]
-
-        # Create a histogram of particle sizes
+        diameters = [prop['equivalent_diameter'] / self.scale if self.scale else prop['equivalent_diameter'] for prop in self.properties]
         fig, ax = plt.subplots(figsize=(8, 6))
         ax.hist(diameters, bins=20, color='blue', edgecolor='black')
-        ax.set_xlabel("Particle Size (units)")
+        ax.set_xlabel("Particle Size (units)" if self.scale else "Particle Size (pixels)")
         ax.set_ylabel("Number of Particles")
         ax.set_title("Particle Size Distribution")
-
-        # Display the histogram in a new window
         histogram_window = tk.Toplevel(self.root)
         histogram_window.title("Particle Size Distribution")
         canvas = FigureCanvasTkAgg(fig, master=histogram_window)
