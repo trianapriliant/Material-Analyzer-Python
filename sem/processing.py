@@ -28,7 +28,7 @@ def classify_brightness(image, n_clusters=3):
     return clustered_image, np.sort(kmeans.cluster_centers_.flatten())
 
 
-def preprocess_image(image_path, blur_kernel=(5, 5), morph_kernel_size=3):
+def preprocess_image(image_path, blur_kernel=(5, 5), morph_kernel_size=3): #ubah blur_kernel dan morph_kernel_size untuk hasil yang ideal
     """
     Muat gambar dan ubah ukurannya jika diperlukan.
     
@@ -60,6 +60,12 @@ def preprocess_image(image_path, blur_kernel=(5, 5), morph_kernel_size=3):
     cleaned_image = cv2.morphologyEx(binary_image, cv2.MORPH_OPEN, kernel)
     print(f"Image shape after preprocessing: {image.shape}")
     return cleaned_image
+    
+    #debugging
+    print("Preprocessing complete.")
+    cv2.imshow("Binary Image", binary_image)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
 
 if __name__ == "__main__":
     # Contoh penggunaan modul
@@ -70,7 +76,7 @@ if __name__ == "__main__":
 
     # Muat dan proses gambar
     image = preprocess_image(image_path)
-    clustered_image, cluster_centers = classify_brightness(image, n_clusters=3)
+    clustered_image, cluster_centers = classify_brightness(image, n_clusters=3)  # Menggunakan n_clusters=3 atau sesuai kebutuhan bisa ditingkatkan
 
     # Tampilkan hasil
     plt.figure(figsize=(10, 5))

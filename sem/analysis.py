@@ -30,6 +30,12 @@ def detect_edges(image, method="canny", **kwargs):
         print(f"Error in detect_edges: {e}")
         raise
 
+    # debugging
+    print("Edge detection complete.")
+    cv2.imshow("Edges", edges)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+    
 def calculate_particle_properties(edges, min_area=50, min_circularity=0.7, pixel_to_um=1.0):
     try:
         contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -55,10 +61,18 @@ def calculate_particle_properties(edges, min_area=50, min_circularity=0.7, pixel
                 "equivalent_diameter": diameter_um,
                 "circularity": circularity
             })
+            
+            
         return properties
     except Exception as e:
         print(f"Error in calculate_particle_properties: {e}")
         raise
+    
+    # debugging
+    print(f"Number of particles detected: {len(contours)}")
+    for i, contour in enumerate(contours):
+        area = cv2.contourArea(contour)
+        print(f"Particle {i + 1}: Area = {area:.2f} pixels^2")
 
 def process_and_analyze(
     image_path, n_clusters=3, edge_method="canny", 
@@ -74,12 +88,14 @@ def process_and_analyze(
         print(f"Clustered image shape: {clustered_image.shape}")
         
         # Deteksi tepi pada gambar brightness yang diklasifikasikan
+        # Ubah low_threshold dan high_threshold sesuai kebutuhan dan sesuaikan dengan gambar tampilannya
         edges = detect_edges(clustered_image, method=edge_method, **edge_kwargs)
         print(f"Edges image shape: {edges.shape}")
         
         # Analisis properti partikel
+        # Ubah min_area, min_circularity, dan pixel_to_um sesuai kebutuhan dan temukan yang ideal, ini direncanakan untuk ditampilkan di user interface agar pengguna dapat menentukan kesesuaiannya.
         properties = calculate_particle_properties(
-            edges, min_area=min_area, min_circularity=min_circularity, pixel_to_um=pixel_to_um
+            edges, min_area=10, min_circularity=0.5, pixel_to_um=1.0
         )
         print(f"Properties calculated: {len(properties)} particles detected.")
         
