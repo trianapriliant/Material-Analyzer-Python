@@ -30,6 +30,39 @@ class SEMGUI:
         # Top frame for buttons
         top_frame = tk.Frame(self.root)
         top_frame.pack(fill="x", pady=10)
+        
+    # ADDING CUSTOMIZATIONS FOR THE GUI FOR USER (31/01/2025 - TRIAN APRILIANTO    
+    # Slider for number of clusters
+        tk.Label(top_frame, text="Number of Clusters:").pack(side="left", padx=5)
+        self.n_clusters_slider = tk.Scale(top_frame, from_=2, to=10, orient="horizontal")
+        self.n_clusters_slider.set(3)  # Default value
+        self.n_clusters_slider.pack(side="left", padx=5)
+
+        # Slider for Canny thresholds
+        tk.Label(top_frame, text="Low Threshold:").pack(side="left", padx=5)
+        self.low_threshold_slider = tk.Scale(top_frame, from_=10, to=200, orient="horizontal")
+        self.low_threshold_slider.set(50)  # Default value
+        self.low_threshold_slider.pack(side="left", padx=5)
+
+        tk.Label(top_frame, text="High Threshold:").pack(side="left", padx=5)
+        self.high_threshold_slider = tk.Scale(top_frame, from_=100, to=300, orient="horizontal")
+        self.high_threshold_slider.set(150)  # Default value
+        self.high_threshold_slider.pack(side="left", padx=5)
+
+        # Input fields for filtering parameters
+        tk.Label(top_frame, text="Min Area:").pack(side="left", padx=5)
+        self.min_area_entry = tk.Entry(top_frame, width=5)
+        self.min_area_entry.insert(0, "50")  # Default value
+        self.min_area_entry.pack(side="left", padx=5)
+
+        tk.Label(top_frame, text="Min Circularity:").pack(side="left", padx=5)
+        self.min_circularity_entry = tk.Entry(top_frame, width=5)
+        self.min_circularity_entry.insert(0, "0.7")  # Default value
+        self.min_circularity_entry.pack(side="left", padx=5)
+
+        # Button to apply parameters
+        apply_button = tk.Button(top_frame, text="Apply Parameters", command=self.apply_parameters)
+        apply_button.pack(side="left", padx=5)
 
         # Button for selecting image
         select_button = tk.Button(top_frame, text="Select Image", command=self.load_and_process_image, height=2)
@@ -77,6 +110,33 @@ class SEMGUI:
         self.result_text.insert("1.0", "Results will be displayed here...")
         self.result_text.config(state="disabled")
 
+    def apply_parameters(self):
+        try:
+            # Ambil nilai dari slider/input field
+            n_clusters = int(self.n_clusters_slider.get())
+            low_threshold = int(self.low_threshold_slider.get())
+            high_threshold = int(self.high_threshold_slider.get())
+            min_area = float(self.min_area_entry.get())
+            min_circularity = float(self.min_circularity_entry.get())
+
+            # Proses gambar dengan parameter baru
+            if self.image_path:
+                self.clustered_image, self.edges, self.properties = process_and_analyze(
+                    self.image_path,
+                    n_clusters=n_clusters,
+                    edge_method="canny",
+                    low_threshold=low_threshold,
+                    high_threshold=high_threshold,
+                    min_area=min_area,
+                    min_circularity=min_circularity
+                )
+                self.display_images()
+                self.display_results()
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to apply parameters: {e}")
+        #debugging    
+        print(f"Parameters from GUI: min_area={min_area}, min_circularity={min_circularity}")
+            
     def load_and_process_image(self):
         file_path = filedialog.askopenfilename(
             title="Select an image",
@@ -105,6 +165,30 @@ class SEMGUI:
         except Exception as e:
             messagebox.showerror("Error", f"Failed to process the image: {e}")
 
+    def draw_bounding_boxes(self, image, contours):
+        """
+        Gambar bounding box pada partikel yang terdeteksi.
+        
+        Parameters:
+        - image: np.ndarray, gambar input (grayscale atau RGB)
+        - contours: list of np.ndarray, kontur partikel
+        
+        Returns:
+        - image_with_boxes: np.ndarray, gambar dengan bounding box
+        """
+        #debugging
+        print("Drawing bounding boxes...")
+        if len(image.shape) == 2:  # Grayscale
+            image_with_boxes = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
+        else:
+            image_with_boxes = image.copy()
+
+        for contour in contours:
+            x, y, w, h = cv2.boundingRect(contour)
+            cv2.rectangle(image_with_boxes, (x, y), (x + w, y + h), (0, 255, 0), 2)
+
+        return image_with_boxes
+
     def display_images(self):
         # Clear previous images
         for widget in self.original_frame.winfo_children():
@@ -114,9 +198,12 @@ class SEMGUI:
         for widget in self.edges_frame.winfo_children():
             widget.destroy()
 
-        # Original Image
+        # Original Image with bounding boxes
         original_image = cv2.imread(self.image_path, cv2.IMREAD_GRAYSCALE)
-        self.display_image_on_tab(self.original_frame, original_image, "Original Image")
+        edges = self.edges
+        contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        image_with_boxes = self.draw_bounding_boxes(original_image, contours)
+        self.display_image_on_tab(self.original_frame, image_with_boxes, "Original Image with Bounding Boxes")
 
         # Clustered Image
         self.display_image_on_tab(self.clustered_frame, self.clustered_image, "Clustered Image")

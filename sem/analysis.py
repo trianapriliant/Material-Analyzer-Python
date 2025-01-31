@@ -2,24 +2,25 @@ import cv2
 import numpy as np
 from sem.processing import classify_brightness, preprocess_image
 
-def detect_edges(image, method="canny", **kwargs):
+def detect_edges(cleaned_image, method="canny", **kwargs):
     try:
         # Hapus dimensi tambahan jika ada
-        if len(image.shape) == 3 and image.shape[2] == 1:
-            image = np.squeeze(image, axis=2)
+        if len(cleaned_image.shape) == 3 and cleaned_image.shape[2] == 1:
+            cleaned_image = np.squeeze(cleaned_image, axis=2)
         
         # Validasi input
-        if image is None or len(image.shape) != 2:
+        if cleaned_image is None or len(cleaned_image.shape) != 2:
             raise ValueError("Input harus berupa gambar grayscale yang valid.")
         
         if method == "canny":
             low_threshold = kwargs.get("low_threshold", 100)
             high_threshold = kwargs.get("high_threshold", 200)
-            edges = cv2.Canny(image, low_threshold, high_threshold)
+            edges = cv2.Canny(cleaned_image, low_threshold, high_threshold)
+            
         elif method == "sobel":
             ksize = kwargs.get("ksize", 3)
-            grad_x = cv2.Sobel(image, cv2.CV_64F, 1, 0, ksize=ksize)
-            grad_y = cv2.Sobel(image, cv2.CV_64F, 0, 1, ksize=ksize)
+            grad_x = cv2.Sobel(cleaned_image, cv2.CV_64F, 1, 0, ksize=ksize)
+            grad_y = cv2.Sobel(cleaned_image, cv2.CV_64F, 0, 1, ksize=ksize)
             edges = cv2.magnitude(grad_x, grad_y)
             edges = np.uint8(np.clip(edges, 0, 255))
         else:
@@ -30,13 +31,49 @@ def detect_edges(image, method="canny", **kwargs):
         print(f"Error in detect_edges: {e}")
         raise
 
-    # debugging
-    print("Edge detection complete.")
-    cv2.imshow("Edges", edges)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
+def process_and_analyze(
+    image_path, n_clusters=3, edge_method="canny", 
+    min_area=None, min_circularity=None, pixel_to_um=1.0, **edge_kwargs
+):
+    # Gunakan nilai default jika parameter tidak diberikan
+    min_area = min_area if min_area is not None else 50
+    min_circularity = min_circularity if min_circularity is not None else 0.7
     
-def calculate_particle_properties(edges, min_area=50, min_circularity=0.7, pixel_to_um=1.0):
+    # Validasi: Pastikan min_area dan min_circularity diberikan
+    if min_area is None or min_circularity is None:
+        raise ValueError("min_area and min_circularity must be provided.")
+    
+    #if min_area is None or min_circularity is None:
+    #    raise ValueError("min_area and min_circularity must be provided.")
+    
+    try:
+        # Muat dan preproses gambar
+        preprocessed_image = preprocess_image(image_path)
+        print(f"Preprocessed image shape: {preprocessed_image.shape}")
+        
+        # Klasifikasi brightness
+        clustered_image, _ = classify_brightness(preprocessed_image, n_clusters=n_clusters)
+        print(f"Clustered image shape: {clustered_image.shape}")
+        
+        # Deteksi tepi pada gambar brightness yang diklasifikasikan
+        edges = detect_edges(clustered_image, method=edge_method, **edge_kwargs)
+        print(f"Edges image shape: {edges.shape}")
+        
+        # Analisis properti partikel
+        properties = calculate_particle_properties(
+            edges, min_area=min_area, min_circularity=min_circularity, pixel_to_um=pixel_to_um
+        )
+        print(f"Properties calculated: {len(properties)} particles detected.")
+        #debugging
+        print(f"Parameters passed to process_and_analyze: min_area={min_area}, min_circularity={min_circularity}")
+        
+        return clustered_image, edges, properties
+    except Exception as e:
+        print(f"Error in process_and_analyze: {e}")
+        raise
+    #debugging
+    
+def calculate_particle_properties(edges, min_area, min_circularity, pixel_to_um=1.0):
     try:
         contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         properties = []
@@ -62,47 +99,14 @@ def calculate_particle_properties(edges, min_area=50, min_circularity=0.7, pixel
                 "circularity": circularity
             })
             
-            
+            #debugging
+            print(f"Parameters received by calculate_particle_properties: min_area={min_area}, min_circularity={min_circularity}")
+        
         return properties
     except Exception as e:
         print(f"Error in calculate_particle_properties: {e}")
         raise
-    
-    # debugging
-    print(f"Number of particles detected: {len(contours)}")
-    for i, contour in enumerate(contours):
-        area = cv2.contourArea(contour)
-        print(f"Particle {i + 1}: Area = {area:.2f} pixels^2")
 
-def process_and_analyze(
-    image_path, n_clusters=3, edge_method="canny", 
-    min_area=50, min_circularity=0.7, pixel_to_um=1.0, **edge_kwargs
-):
-    try:
-        # Muat dan preproses gambar
-        preprocessed_image = preprocess_image(image_path)
-        print(f"Preprocessed image shape: {preprocessed_image.shape}")
-        
-        # Klasifikasi brightness
-        clustered_image, _ = classify_brightness(preprocessed_image, n_clusters=n_clusters)
-        print(f"Clustered image shape: {clustered_image.shape}")
-        
-        # Deteksi tepi pada gambar brightness yang diklasifikasikan
-        # Ubah low_threshold dan high_threshold sesuai kebutuhan dan sesuaikan dengan gambar tampilannya
-        edges = detect_edges(clustered_image, method=edge_method, **edge_kwargs)
-        print(f"Edges image shape: {edges.shape}")
-        
-        # Analisis properti partikel
-        # Ubah min_area, min_circularity, dan pixel_to_um sesuai kebutuhan dan temukan yang ideal, ini direncanakan untuk ditampilkan di user interface agar pengguna dapat menentukan kesesuaiannya.
-        properties = calculate_particle_properties(
-            edges, min_area=10, min_circularity=0.5, pixel_to_um=1.0
-        )
-        print(f"Properties calculated: {len(properties)} particles detected.")
-        
-        return clustered_image, edges, properties
-    except Exception as e:
-        print(f"Error in process_and_analyze: {e}")
-        raise
 
 if __name__ == "__main__":
     # Contoh penggunaan modul

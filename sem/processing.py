@@ -53,11 +53,16 @@ def preprocess_image(image_path, blur_kernel=(5, 5), morph_kernel_size=3): #ubah
     blurred = cv2.GaussianBlur(image, blur_kernel, 0)
     
     # Thresholding menggunakan Otsu's Method
-    _, binary_image = cv2.threshold(blurred, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+    #_, binary_image = cv2.threshold(blurred, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+    #Adaptive Thresholding
+    binary_image = cv2.adaptiveThreshold(
+    blurred, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, blockSize=11, C=2
+    )
     
     # Operasi morfologi untuk membersihkan noise kecil
-    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (morph_kernel_size, morph_kernel_size))
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
     cleaned_image = cv2.morphologyEx(binary_image, cv2.MORPH_OPEN, kernel)
+    cleaned_image = cv2.morphologyEx(cleaned_image, cv2.MORPH_CLOSE, kernel)
     print(f"Image shape after preprocessing: {image.shape}")
     return cleaned_image
     
