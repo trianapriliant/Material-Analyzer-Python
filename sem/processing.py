@@ -29,48 +29,41 @@ def classify_brightness(image, n_clusters=3):
 
 
 def preprocess_image(image_path, blur_kernel=(5, 5), morph_kernel_size=3): #ubah blur_kernel dan morph_kernel_size untuk hasil yang ideal
-    """
-    Muat gambar dan ubah ukurannya jika diperlukan.
-    
-    Parameters:
-    - image_path: str, path ke file gambar SEM.
-    - blur_kernel: tuple, ukuran kernel untuk Gaussian Blur.
-    - morph_kernel_size: int, ukuran kernel untuk operasi morfologi.
-    
-    Returns:
-    - binary_image: np.ndarray, gambar biner hasil preprocessing.
-    """
-    # Baca gambar
-    image = cv2.imread(image_path)
-    if image is None:
-        raise ValueError(f"Gambar tidak ditemukan di path: {image_path}")
-    
-    # Konversi ke grayscale jika gambar berwarna
-    if len(image.shape) == 3:  # Gambar berwarna (3 channel)
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    
-    # Gaussian Blur untuk mengurangi noise
-    blurred = cv2.GaussianBlur(image, blur_kernel, 0)
-    
-    # Thresholding menggunakan Otsu's Method
-    #_, binary_image = cv2.threshold(blurred, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-    #Adaptive Thresholding
-    binary_image = cv2.adaptiveThreshold(
-    blurred, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, blockSize=11, C=2
-    )
-    
-    # Operasi morfologi untuk membersihkan noise kecil
-    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
-    cleaned_image = cv2.morphologyEx(binary_image, cv2.MORPH_OPEN, kernel)
-    cleaned_image = cv2.morphologyEx(cleaned_image, cv2.MORPH_CLOSE, kernel)
-    print(f"Image shape after preprocessing: {image.shape}")
-    return cleaned_image
-    
-    #debugging
-    print("Preprocessing complete.")
-    cv2.imshow("Binary Image", binary_image)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
+    try:
+        # Baca gambar
+        image = cv2.imread(image_path)
+        if image is None:
+            raise ValueError(f"Gambar tidak ditemukan di path: {image_path}")
+        
+        # Konversi ke grayscale jika gambar berwarna
+        if len(image.shape) == 3:  # Gambar berwarna (3 channel)
+            image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        
+        # Gaussian Blur untuk mengurangi noise
+        blurred = cv2.GaussianBlur(image, blur_kernel, 0)
+        
+        # Thresholding menggunakan Otsu's Method
+        #_, binary_image = cv2.threshold(blurred, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        #Adaptive Thresholding
+        binary_image = cv2.adaptiveThreshold(
+        blurred, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, blockSize=11, C=2
+        )
+        
+        # Operasi morfologi untuk membersihkan noise kecil
+        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
+        cleaned_image = cv2.morphologyEx(binary_image, cv2.MORPH_OPEN, kernel)
+        cleaned_image = cv2.morphologyEx(cleaned_image, cv2.MORPH_CLOSE, kernel)
+        print(f"Image shape after preprocessing: {image.shape}")
+        print("Preprocessing complete.")
+        print(f"Binary image shape: {binary_image.shape}")
+        # cv2.imshow("Binary Image", binary_image)
+        # cv2.waitKey(0)
+        # cv2.destroyAllWindows()
+            
+        return cleaned_image
+    except Exception as e:
+        print(f"Error in preprocess_image: {e}")
+        raise
 
 if __name__ == "__main__":
     # Contoh penggunaan modul

@@ -26,6 +26,13 @@ def detect_edges(cleaned_image, method="canny", **kwargs):
         else:
             raise ValueError("Metode deteksi tepi tidak dikenal. Gunakan 'canny' atau 'sobel'.")
         
+        # Debugging
+        print("Edge detection complete.")
+        print(f"Edges image shape: {edges.shape}")
+        # cv2.imshow("Edges", edges)
+        # cv2.waitKey(0)
+        # cv2.destroyAllWindows()
+        
         return edges
     except Exception as e:
         print(f"Error in detect_edges: {e}")
@@ -59,6 +66,31 @@ def process_and_analyze(
         edges = detect_edges(clustered_image, method=edge_method, **edge_kwargs)
         print(f"Edges image shape: {edges.shape}")
         
+        # Distance Transform dan Watershed
+        dist_transform = cv2.distanceTransform(edges, cv2.DIST_L2, 5)
+        _, sure_fg = cv2.threshold(dist_transform, 0.7 * dist_transform.max(), 255, 0)
+        sure_fg = np.uint8(sure_fg)
+        unknown = cv2.subtract(edges, sure_fg)
+
+        # Connected Components
+        _, markers = cv2.connectedComponents(sure_fg)
+        markers = markers + 1
+        markers[unknown == 255] = 0
+        
+        # Pastikan markers berformat CV_32SC1
+        markers = np.int32(markers)
+        
+        # Pastikan clustered_image berupa citra 3-channel (BGR)
+        if len(clustered_image.shape) == 2:  # Grayscale
+            clustered_image_bgr = cv2.cvtColor(clustered_image, cv2.COLOR_GRAY2BGR)
+        else:
+            clustered_image_bgr = clustered_image
+        
+        # Watershed
+        markers = cv2.watershed(clustered_image_bgr, markers)
+        segmented_image = clustered_image_bgr.copy()
+        segmented_image[markers == -1] = [0, 255, 0]  # Tandai batas partikel
+        
         # Analisis properti partikel
         properties = calculate_particle_properties(
             edges, min_area=min_area, min_circularity=min_circularity, pixel_to_um=pixel_to_um
@@ -66,6 +98,16 @@ def process_and_analyze(
         print(f"Properties calculated: {len(properties)} particles detected.")
         #debugging
         print(f"Parameters passed to process_and_analyze: min_area={min_area}, min_circularity={min_circularity}")
+        
+        print(f"Clustered image type: {clustered_image.dtype}, shape: {clustered_image.shape}")
+        print(f"Markers type: {markers.dtype}, shape: {markers.shape}")
+        
+        # Debugging
+        print("Segmentation complete.")
+        print(f"Markers shape: {markers.shape}")
+        # cv2.imshow("Segmented Image", segmented_image)
+        # cv2.waitKey(0)
+        # cv2.destroyAllWindows()
         
         return clustered_image, edges, properties
     except Exception as e:
@@ -101,6 +143,15 @@ def calculate_particle_properties(edges, min_area, min_circularity, pixel_to_um=
             
             #debugging
             print(f"Parameters received by calculate_particle_properties: min_area={min_area}, min_circularity={min_circularity}")
+        
+        # Debugging
+        print(f"Number of particles detected: {len(contours)}")
+        for i, contour in enumerate(contours):
+            area = cv2.contourArea(contour)
+            perimeter = cv2.arcLength(contour, True)
+            circularity = (4 * np.pi * area) / (perimeter ** 2) if perimeter > 0 else 0
+            print(f"Particle {i + 1}: Area={area:.2f}, Circularity={circularity:.2f}")
+        
         
         return properties
     except Exception as e:

@@ -16,6 +16,7 @@ class SEMGUI:
         self.clustered_image = None
         self.edges = None
         self.properties = None
+        self.image_with_boxes = None
         self.scale = None  # Skala piksel per unit jarak asli
         self.line_coords = None  # Koordinat garis yang digambar
         self.current_line = None  # Garis yang sedang digambar
@@ -31,7 +32,7 @@ class SEMGUI:
         top_frame = tk.Frame(self.root)
         top_frame.pack(fill="x", pady=10)
         
-    # ADDING CUSTOMIZATIONS FOR THE GUI FOR USER (31/01/2025 - TRIAN APRILIANTO    
+    # ADDING CUSTOMIZATIONS FOR THE GUI FOR USER (31/01/2025) - TRIAN APRILIANTO    
     # Slider for number of clusters
         tk.Label(top_frame, text="Number of Clusters:").pack(side="left", padx=5)
         self.n_clusters_slider = tk.Scale(top_frame, from_=2, to=10, orient="horizontal")
@@ -116,9 +117,17 @@ class SEMGUI:
             n_clusters = int(self.n_clusters_slider.get())
             low_threshold = int(self.low_threshold_slider.get())
             high_threshold = int(self.high_threshold_slider.get())
-            min_area = float(self.min_area_entry.get())
-            min_circularity = float(self.min_circularity_entry.get())
-
+            
+            # Validasi input field
+            try:
+                min_area = float(self.min_area_entry.get())
+                min_circularity = float(self.min_circularity_entry.get())
+            except ValueError:
+                messagebox.showerror("Error", "Invalid input for min_area or min_circularity. Please enter numeric values.")
+                return
+            
+            print(f"Parameters from GUI: min_area={min_area}, min_circularity={min_circularity}")
+            
             # Proses gambar dengan parameter baru
             if self.image_path:
                 self.clustered_image, self.edges, self.properties = process_and_analyze(
@@ -130,12 +139,31 @@ class SEMGUI:
                     min_area=min_area,
                     min_circularity=min_circularity
                 )
+                
+                # Cari kontur partikel
+                contours, _ = cv2.findContours(self.edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+                print(f"Number of contours detected: {len(contours)}")
+                
+                if len(contours) == 0:
+                    print("No contours found. Check preprocessing and edge detection steps.")
+                    self.image_with_boxes = None  # Tidak ada kontur, jangan gambar bounding box
+                else:
+                    # Gambar bounding box ulang dengan parameter baru
+                    original_image = cv2.imread(self.image_path, cv2.IMREAD_GRAYSCALE)
+                    self.image_with_boxes = self.draw_bounding_boxes(original_image, contours)
+                
+                # Tampilkan gambar yang diperbarui
                 self.display_images()
                 self.display_results()
+                
+            #debugging
+            contours, _ = cv2.findContours(self.edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            if len(contours) == 0:
+                print("No contours found. Check preprocessing and edge detection steps.")
+            else:
+                print(f"Found {len(contours)} contours.")
         except Exception as e:
             messagebox.showerror("Error", f"Failed to apply parameters: {e}")
-        #debugging    
-        print(f"Parameters from GUI: min_area={min_area}, min_circularity={min_circularity}")
             
     def load_and_process_image(self):
         file_path = filedialog.askopenfilename(
@@ -186,9 +214,32 @@ class SEMGUI:
         for contour in contours:
             x, y, w, h = cv2.boundingRect(contour)
             cv2.rectangle(image_with_boxes, (x, y), (x + w, y + h), (0, 255, 0), 2)
+            
+        print(f"Drawing {len(contours)} bounding boxes.")
 
         return image_with_boxes
 
+    # def display_images(self):
+    #     # Clear previous images
+    #     for widget in self.original_frame.winfo_children():
+    #         widget.destroy()
+    #     for widget in self.clustered_frame.winfo_children():
+    #         widget.destroy()
+    #     for widget in self.edges_frame.winfo_children():
+    #         widget.destroy()
+
+        # # Original Image with bounding boxes
+        # original_image = cv2.imread(self.image_path, cv2.IMREAD_GRAYSCALE)
+        # edges = self.edges
+        # contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        # image_with_boxes = self.draw_bounding_boxes(original_image, contours)
+        # self.display_image_on_tab(self.original_frame, image_with_boxes, "Original Image with Bounding Boxes")
+
+        # # Clustered Image
+        # self.display_image_on_tab(self.clustered_frame, self.clustered_image, "Clustered Image")
+
+        # # Edges
+        # self.display_image_on_tab(self.edges_frame, self.edges, "Edges")
     def display_images(self):
         # Clear previous images
         for widget in self.original_frame.winfo_children():
@@ -199,18 +250,20 @@ class SEMGUI:
             widget.destroy()
 
         # Original Image with bounding boxes
-        original_image = cv2.imread(self.image_path, cv2.IMREAD_GRAYSCALE)
-        edges = self.edges
-        contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        image_with_boxes = self.draw_bounding_boxes(original_image, contours)
-        self.display_image_on_tab(self.original_frame, image_with_boxes, "Original Image with Bounding Boxes")
+        if self.image_with_boxes is not None:
+            self.display_image_on_tab(self.original_frame, self.image_with_boxes, "Original Image with Bounding Boxes")
+        else:
+            print("Warning: No bounding boxes to display.")
+            # Tampilkan gambar asli jika tidak ada bounding box
+            original_image = cv2.imread(self.image_path, cv2.IMREAD_GRAYSCALE)
+            self.display_image_on_tab(self.original_frame, original_image, "Original Image")
 
         # Clustered Image
         self.display_image_on_tab(self.clustered_frame, self.clustered_image, "Clustered Image")
 
         # Edges
         self.display_image_on_tab(self.edges_frame, self.edges, "Edges")
-
+    
     def display_image_on_tab(self, frame, image, title):
         fig = plt.figure(figsize=(8, 6))
         ax = fig.add_subplot(111)
