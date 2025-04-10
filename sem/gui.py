@@ -130,6 +130,7 @@ class SEMGUI:
             
             # Proses gambar dengan parameter baru
             if self.image_path:
+                # Jalankan ulang seluruh pipeline
                 self.clustered_image, self.edges, self.properties = process_and_analyze(
                     self.image_path,
                     n_clusters=n_clusters,
@@ -155,13 +156,6 @@ class SEMGUI:
                 # Tampilkan gambar yang diperbarui
                 self.display_images()
                 self.display_results()
-                
-            #debugging
-            contours, _ = cv2.findContours(self.edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-            if len(contours) == 0:
-                print("No contours found. Check preprocessing and edge detection steps.")
-            else:
-                print(f"Found {len(contours)} contours.")
         except Exception as e:
             messagebox.showerror("Error", f"Failed to apply parameters: {e}")
             

@@ -105,9 +105,9 @@ def process_and_analyze(
         # Debugging
         print("Segmentation complete.")
         print(f"Markers shape: {markers.shape}")
-        # cv2.imshow("Segmented Image", segmented_image)
-        # cv2.waitKey(0)
-        # cv2.destroyAllWindows()
+        cv2.imshow("Segmented Image", segmented_image)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
         
         return clustered_image, edges, properties
     except Exception as e:
@@ -145,15 +145,14 @@ def calculate_particle_properties(edges, min_area, min_circularity, pixel_to_um=
             print(f"Parameters received by calculate_particle_properties: min_area={min_area}, min_circularity={min_circularity}")
         
         # Debugging
-        print(f"Number of particles detected: {len(contours)}")
-        for i, contour in enumerate(contours):
-            area = cv2.contourArea(contour)
-            perimeter = cv2.arcLength(contour, True)
-            circularity = (4 * np.pi * area) / (perimeter ** 2) if perimeter > 0 else 0
-            print(f"Particle {i + 1}: Area={area:.2f}, Circularity={circularity:.2f}")
+            print(f"Number of particles detected: {len(contours)}")
+            for i, contour in enumerate(contours):
+                area = cv2.contourArea(contour)
+                perimeter = cv2.arcLength(contour, True)
+                circularity = (4 * np.pi * area) / (perimeter ** 2) if perimeter > 0 else 0
+                print(f"Particle {i + 1}: Area={area:.2f}, Circularity={circularity:.2f}")
         
-        
-        return properties
+        return properties, contours
     except Exception as e:
         print(f"Error in calculate_particle_properties: {e}")
         raise

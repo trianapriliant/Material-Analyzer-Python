@@ -32,3 +32,6 @@ Thumbs.db
 
 # Ignore rar
 *.rar
+
+# Ignore .exe
+*.exe
