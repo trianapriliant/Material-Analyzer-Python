@@ -8,7 +8,7 @@ class UVVisDRSWindow(tk.Toplevel):
     def __init__(self, master=None):
         super().__init__(master)
         self.title("Analisis UV-Vis DRS")
-        self.geometry("600x450")
+        self.geometry("600x500")
         self.configure(bg="#fafafa")
 
         self.frame = ttk.Frame(self, padding="30")
@@ -26,6 +26,7 @@ class UVVisDRSWindow(tk.Toplevel):
                        foreground=[("active", "gray")])
         self.style.configure("TLabel", font=("Segoe UI", 12), background="#fafafa")
         self.style.configure("TRadiobutton", font=("Segoe UI", 12), background="#fafafa")
+        self.style.configure("TCombobox", font=("Segoe UI", 12))
 
         self.file_path = None
         self.nm = None
@@ -49,25 +50,39 @@ class UVVisDRSWindow(tk.Toplevel):
         self.plot_km_smoothed_button = ttk.Button(self.frame, text="Plot Kubelka-Munk (Smoothed)", command=self.plot_km_smoothed, style="TButton", state=tk.DISABLED)
         self.plot_km_smoothed_button.grid(row=3, column=0, padx=10, pady=10, sticky="ew")
 
+        # Dropdown untuk memilih material
+        self.material_label = ttk.Label(self.frame, text="Pilih Material:")
+        self.material_label.grid(row=4, column=0, padx=10, pady=5, sticky="w")
+
+        self.material_var = tk.StringVar(value="SrTiO3(La, Cr)")  # Default ke SrTiO3(La, Cr)
+        self.material_dropdown = ttk.Combobox(self.frame, textvariable=self.material_var, 
+                                              values=list(plotting.MATERIAL_BAND_GAPS.keys()), state="readonly")
+        self.material_dropdown.grid(row=5, column=0, padx=10, pady=5, sticky="ew")
+        self.material_dropdown.bind("<<ComboboxSelected>>", self.update_material_info)
+
+        # Label untuk informasi band gap literatur
+        self.material_info_label = ttk.Label(self.frame, text="Rentang Band Gap Literatur: 2.5–3.0 eV")
+        self.material_info_label.grid(row=6, column=0, padx=10, pady=5, sticky="w")
+
         self.transition_label = ttk.Label(self.frame, text="Pilih Tipe Transisi:")
-        self.transition_label.grid(row=4, column=0, padx=10, pady=5, sticky="w")
+        self.transition_label.grid(row=7, column=0, padx=10, pady=5, sticky="w")
 
         self.transition_var = tk.StringVar(value='direct')
         self.direct_radio = ttk.Radiobutton(self.frame, text="Langsung", variable=self.transition_var, value='direct')
-        self.direct_radio.grid(row=5, column=0, padx=10, pady=5, sticky="w")
+        self.direct_radio.grid(row=8, column=0, padx=10, pady=5, sticky="w")
 
         self.indirect_radio = ttk.Radiobutton(self.frame, text="Tidak Langsung", variable=self.transition_var, value='indirect')
-        self.indirect_radio.grid(row=6, column=0, padx=10, pady=5, sticky="w")
+        self.indirect_radio.grid(row=9, column=0, padx=10, pady=5, sticky="w")
 
         self.calculate_band_gap_button = ttk.Button(self.frame, text="Hitung Energi Band Gap", command=self.calculate_band_gap, style="TButton", state=tk.DISABLED)
-        self.calculate_band_gap_button.grid(row=7, column=0, padx=10, pady=10, sticky="ew")
+        self.calculate_band_gap_button.grid(row=10, column=0, padx=10, pady=10, sticky="ew")
 
         self.plot_tauc_button = ttk.Button(self.frame, text="Plot Tauc dan Hitung Band Gap", command=self.plot_tauc, style="TButton", state=tk.DISABLED)
-        self.plot_tauc_button.grid(row=8, column=0, padx=10, pady=10, sticky="ew")
+        self.plot_tauc_button.grid(row=11, column=0, padx=10, pady=10, sticky="ew")
 
         # Label untuk menampilkan hasil energi band gap
         self.result_label = ttk.Label(self.frame, text="Energi Band Gap: Belum Dihitung", font=("Segoe UI", 12, "bold"), foreground="#333333")
-        self.result_label.grid(row=9, column=0, padx=10, pady=15, sticky="w")
+        self.result_label.grid(row=12, column=0, padx=10, pady=15, sticky="w")
 
         self.frame.grid_columnconfigure(0, weight=1)
 
@@ -78,7 +93,7 @@ class UVVisDRSWindow(tk.Toplevel):
             self.nm, self.percent_R = processing.read_csv(self.file_path)
             self.R = processing.calculate_R(self.percent_R)
             self.F_R = processing.calculate_kubelka_munk(self.R)
-            self.F_R_smoothed = processing.smooth_data(self.F_R)  # Simpan versi smoothed
+            self.F_R_smoothed = processing.smooth_data(self.F_R)
             self.E = processing.calculate_energy(self.nm)
             self.plot_raw_button.config(state=tk.NORMAL)
             self.plot_km_original_button.config(state=tk.NORMAL)
@@ -86,6 +101,16 @@ class UVVisDRSWindow(tk.Toplevel):
             self.calculate_band_gap_button.config(state=tk.NORMAL)
             self.plot_tauc_button.config(state=tk.NORMAL)
             self.result_label.config(text="Energi Band Gap: Belum Dihitung")
+            self.update_material_info()
+
+    def update_material_info(self, event=None):
+        """Memperbarui informasi band gap literatur berdasarkan material yang dipilih."""
+        material = self.material_var.get()
+        if material in plotting.MATERIAL_BAND_GAPS:
+            e_min, e_max = plotting.MATERIAL_BAND_GAPS[material]
+            self.material_info_label.config(text=f"Rentang Band Gap Literatur: {e_min}–{e_max} eV")
+        else:
+            self.material_info_label.config(text="Rentang Band Gap Literatur: Tidak Diketahui")
 
     def plot_raw(self):
         """Menampilkan plot data mentah."""
@@ -102,8 +127,9 @@ class UVVisDRSWindow(tk.Toplevel):
     def calculate_band_gap(self):
         """Menghitung energi band gap tanpa menampilkan plot."""
         transition_type = self.transition_var.get()
+        material = self.material_var.get()
         try:
-            self.band_gap = plotting.calculate_band_gap(self.E, self.F_R_smoothed, transition_type)
+            self.band_gap = plotting.calculate_band_gap(self.E, self.F_R_smoothed, transition_type, material)
             self.result_label.config(text=f"Energi Band Gap: {self.band_gap:.2f} eV", foreground="#45a049")
             messagebox.showinfo("Sukses", f"Energi Band Gap: {self.band_gap:.2f} eV")
         except ValueError as e:
@@ -113,8 +139,9 @@ class UVVisDRSWindow(tk.Toplevel):
     def plot_tauc(self):
         """Menampilkan plot Tauc dan menghitung energi band gap."""
         transition_type = self.transition_var.get()
+        material = self.material_var.get()
         try:
-            self.band_gap = plotting.plot_tauc(self.E, self.F_R_smoothed, transition_type)
+            self.band_gap = plotting.plot_tauc(self.E, self.F_R_smoothed, transition_type, material)
             self.result_label.config(text=f"Energi Band Gap: {self.band_gap:.2f} eV", foreground="#45a049")
             messagebox.showinfo("Sukses", "Plot Tauc telah ditampilkan. Silakan periksa plot untuk garis tangensial dan nilai energi band gap.")
         except ValueError as e:

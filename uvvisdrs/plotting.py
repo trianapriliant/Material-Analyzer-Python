@@ -3,6 +3,18 @@ import numpy as np
 from scipy.stats import linregress
 from .processing import smooth_data
 
+# Daftar material fotokatalis beserta rentang band gap literatur
+MATERIAL_BAND_GAPS = {
+    "TiO2 (anatase)": (3.0, 3.4),
+    "TiO2 (rutile)": (2.8, 3.2),
+    "SrTiO3 (murni)": (3.0, 3.4),
+    "SrTiO3(La, Cr)": (2.5, 3.0),
+    "ZnO": (3.1, 3.5),
+    "WO3": (2.5, 2.9),
+    "BiVO4": (2.3, 2.6),
+    "g-C3N4": (2.5, 2.9)
+}
+
 def plot_raw_data(nm, percent_R):
     """Memplot data mentah %R vs nm dengan nm meningkat."""
     sorted_indices = np.argsort(nm)
@@ -34,7 +46,7 @@ def plot_kubelka_munk(E, F_R, smoothed=False):
     plt.gca().set_facecolor('#fafafa')
     plt.show()
 
-def calculate_band_gap(E, F_R, transition_type='direct'):
+def calculate_band_gap(E, F_R, transition_type='direct', material=None):
     """Menghitung energi band gap tanpa menampilkan plot."""
     if transition_type == 'direct':
         y = (F_R * E)**2
@@ -50,25 +62,40 @@ def calculate_band_gap(E, F_R, transition_type='direct'):
     E_sorted = E[sorted_indices]
     y_sorted = y[sorted_indices]
 
-    # Batasi rentang energi untuk menghindari noise
-    mask = (E_sorted >= 1.0) & (E_sorted <= 4.0)
+    # Tentukan rentang energi berdasarkan material
+    if material and material in MATERIAL_BAND_GAPS:
+        e_min, e_max = MATERIAL_BAND_GAPS[material]
+    else:
+        e_min, e_max = 1.0, 4.0  # Default jika material tidak dikenal
+
+    mask = (E_sorted >= e_min) & (E_sorted <= e_max)
     E_filtered = E_sorted[mask]
     y_filtered = y_sorted[mask]
 
     if len(E_filtered) < 10:
-        raise ValueError("Data dalam rentang energi 1–4 eV terlalu sedikit untuk analisis")
+        raise ValueError(f"Data dalam rentang energi {e_min}–{e_max} eV terlalu sedikit untuk analisis")
 
-    # Hitung turunan pertama untuk menemukan daerah linier
+    # Hitung turunan pertama dan kedua untuk menemukan daerah linier
     dy = np.diff(y_filtered) / np.diff(E_filtered)
-    E_diff = (E_filtered[:-1] + E_filtered[1:]) / 2
+    d2y = np.diff(dy) / np.diff(E_filtered[:-1])  # Turunan kedua
+    E_diff = (E_filtered[:-2] + E_filtered[2:]) / 2
 
-    # Cari daerah dengan kenaikan tajam
-    dy_percentile = np.percentile(dy, 60)
-    linear_region = np.where(dy > dy_percentile)[0]
-
-    if len(linear_region) > 0:
-        start_idx = max(0, linear_region[0] - 5)
-        end_idx = min(len(E_filtered) - 1, linear_region[-1] + 5)
+    # Cari titik infleksi (d2y mendekati nol) untuk mendeteksi awal transisi
+    inflection_points = np.where(np.abs(d2y) < np.percentile(np.abs(d2y), 20))[0]
+    
+    if len(inflection_points) > 0:
+        start_idx = inflection_points[0]
+        # Cari daerah linier setelah titik infleksi
+        dy_region = dy[start_idx:]
+        E_region = E_filtered[start_idx:-1]
+        # Fokus pada daerah dengan turunan tertinggi setelah titik infleksi
+        dy_percentile = np.percentile(dy_region, 50)
+        linear_region = np.where(dy_region > dy_percentile)[0]
+        if len(linear_region) > 0:
+            start_idx = start_idx + linear_region[0]
+            end_idx = start_idx + linear_region[-1] + 1
+        else:
+            end_idx = start_idx + len(dy_region) // 2
     else:
         mid_idx = len(E_filtered) // 2
         start_idx = mid_idx - len(E_filtered) // 8
@@ -88,12 +115,12 @@ def calculate_band_gap(E, F_R, transition_type='direct'):
     band_gap = -intercept / slope
 
     # Validasi band gap
-    if not 1.0 <= band_gap <= 4.0:
-        raise ValueError(f"Nilai band gap ({band_gap:.2f} eV) di luar rentang yang diharapkan (1.0–4.0 eV)")
+    if not e_min <= band_gap <= e_max:
+        raise ValueError(f"Nilai band gap ({band_gap:.2f} eV) di luar rentang yang diharapkan ({e_min}–{e_max} eV)")
 
     return band_gap
 
-def plot_tauc(E, F_R, transition_type='direct'):
+def plot_tauc(E, F_R, transition_type='direct', material=None):
     """Memplot Tauc plot berdasarkan tipe transisi dan menghitung energi band gap."""
     if transition_type == 'direct':
         y = (F_R * E)**2
@@ -109,25 +136,38 @@ def plot_tauc(E, F_R, transition_type='direct'):
     E_sorted = E[sorted_indices]
     y_sorted = y[sorted_indices]
 
-    # Batasi rentang energi untuk menghindari noise
-    mask = (E_sorted >= 1.0) & (E_sorted <= 4.0)
+    # Tentukan rentang energi berdasarkan material
+    if material and material in MATERIAL_BAND_GAPS:
+        e_min, e_max = MATERIAL_BAND_GAPS[material]
+    else:
+        e_min, e_max = 1.0, 4.0
+
+    mask = (E_sorted >= e_min) & (E_sorted <= e_max)
     E_filtered = E_sorted[mask]
     y_filtered = y_sorted[mask]
 
     if len(E_filtered) < 10:
-        raise ValueError("Data dalam rentang energi 1–4 eV terlalu sedikit untuk analisis")
+        raise ValueError(f"Data dalam rentang energi {e_min}–{e_max} eV terlalu sedikit untuk analisis")
 
-    # Hitung turunan pertama untuk menemukan daerah linier
+    # Hitung turunan pertama dan kedua
     dy = np.diff(y_filtered) / np.diff(E_filtered)
-    E_diff = (E_filtered[:-1] + E_filtered[1:]) / 2
+    d2y = np.diff(dy) / np.diff(E_filtered[:-1])
+    E_diff = (E_filtered[:-2] + E_filtered[2:]) / 2
 
-    # Cari daerah dengan kenaikan tajam
-    dy_percentile = np.percentile(dy, 60)
-    linear_region = np.where(dy > dy_percentile)[0]
-
-    if len(linear_region) > 0:
-        start_idx = max(0, linear_region[0] - 5)
-        end_idx = min(len(E_filtered) - 1, linear_region[-1] + 5)
+    # Cari titik infleksi
+    inflection_points = np.where(np.abs(d2y) < np.percentile(np.abs(d2y), 20))[0]
+    
+    if len(inflection_points) > 0:
+        start_idx = inflection_points[0]
+        dy_region = dy[start_idx:]
+        E_region = E_filtered[start_idx:-1]
+        dy_percentile = np.percentile(dy_region, 50)
+        linear_region = np.where(dy_region > dy_percentile)[0]
+        if len(linear_region) > 0:
+            start_idx = start_idx + linear_region[0]
+            end_idx = start_idx + linear_region[-1] + 1
+        else:
+            end_idx = start_idx + len(dy_region) // 2
     else:
         mid_idx = len(E_filtered) // 2
         start_idx = mid_idx - len(E_filtered) // 8
@@ -143,12 +183,12 @@ def plot_tauc(E, F_R, transition_type='direct'):
     # Lakukan linear fitting
     slope, intercept, _, _, _ = linregress(E_linear, y_linear)
     
-    # Hitung titik potong dengan sumbu x
+    # Hitung titik potong
     band_gap = -intercept / slope
 
     # Validasi band gap
-    if not 1.0 <= band_gap <= 4.0:
-        raise ValueError(f"Nilai band gap ({band_gap:.2f} eV) di luar rentang yang diharapkan (1.0–4.0 eV)")
+    if not e_min <= band_gap <= e_max:
+        raise ValueError(f"Nilai band gap ({band_gap:.2f} eV) di luar rentang yang diharapkan ({e_min}–{e_max} eV)")
 
     # Plot Tauc plot
     plt.figure(figsize=(8, 6), facecolor='#fafafa')
