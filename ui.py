@@ -2,7 +2,7 @@ import tkinter as tk
 from tkinter import ttk, font, PhotoImage
 from uvvis.gui import UVVisGUI
 from sem.gui import SEMGUI
-# Impor modul GUI untuk analisis lain (UVVisDRS, FTIR, SEM) di sini
+from uvvisdrs.gui import UVVisDRSWindow  # Impor modul UV-Vis DRS
 
 class UIMainApp:
     def __init__(self, root):
@@ -92,8 +92,8 @@ class UIMainApp:
 
     def open_uvvis_drs(self):
         """Buka modul UV-Vis DRS"""
-        # Implementasi modul UV-Vis DRS di sini
-        pass
+        uvvis_drs_window = tk.Toplevel(self.root)
+        UVVisDRSWindow(uvvis_drs_window)
 
     def open_ftir(self):
         """Buka modul FTIR"""
