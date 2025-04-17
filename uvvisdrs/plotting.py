@@ -66,7 +66,7 @@ def calculate_band_gap(E, F_R, transition_type='direct', material=None):
     if material and material in MATERIAL_BAND_GAPS:
         e_min, e_max = MATERIAL_BAND_GAPS[material]
     else:
-        e_min, e_max = 1.0, 4.0  # Default jika material tidak dikenal
+        e_min, e_max = 1.0, 4.0
 
     mask = (E_sorted >= e_min) & (E_sorted <= e_max)
     E_filtered = E_sorted[mask]
@@ -75,25 +75,25 @@ def calculate_band_gap(E, F_R, transition_type='direct', material=None):
     if len(E_filtered) < 10:
         raise ValueError(f"Data dalam rentang energi {e_min}–{e_max} eV terlalu sedikit untuk analisis")
 
-    # Hitung turunan pertama dan kedua untuk menemukan daerah linier
+    # Hitung turunan pertama dan kedua
     dy = np.diff(y_filtered) / np.diff(E_filtered)
-    d2y = np.diff(dy) / np.diff(E_filtered[:-1])  # Turunan kedua
+    d2y = np.diff(dy) / np.diff(E_filtered[:-1])
     E_diff = (E_filtered[:-2] + E_filtered[2:]) / 2
 
-    # Cari titik infleksi (d2y mendekati nol) untuk mendeteksi awal transisi
+    # Cari titik infleksi (d2y mendekati nol)
     inflection_points = np.where(np.abs(d2y) < np.percentile(np.abs(d2y), 20))[0]
     
     if len(inflection_points) > 0:
         start_idx = inflection_points[0]
-        # Cari daerah linier setelah titik infleksi
         dy_region = dy[start_idx:]
         E_region = E_filtered[start_idx:-1]
-        # Fokus pada daerah dengan turunan tertinggi setelah titik infleksi
-        dy_percentile = np.percentile(dy_region, 50)
+        # Sesuaikan persentil untuk fokus pada daerah linier yang lebih tepat (dekat 2.30 eV)
+        dy_percentile = np.percentile(dy_region, 40)  # Turunkan persentil untuk menangkap daerah linier lebih awal
         linear_region = np.where(dy_region > dy_percentile)[0]
         if len(linear_region) > 0:
             start_idx = start_idx + linear_region[0]
-            end_idx = start_idx + linear_region[-1] + 1
+            # Perluas daerah linier untuk fitting yang lebih akurat
+            end_idx = start_idx + len(linear_region) // 2
         else:
             end_idx = start_idx + len(dy_region) // 2
     else:
@@ -111,7 +111,7 @@ def calculate_band_gap(E, F_R, transition_type='direct', material=None):
     # Lakukan linear fitting
     slope, intercept, _, _, _ = linregress(E_linear, y_linear)
     
-    # Hitung titik potong dengan sumbu x
+    # Hitung titik potong
     band_gap = -intercept / slope
 
     # Validasi band gap
@@ -161,11 +161,11 @@ def plot_tauc(E, F_R, transition_type='direct', material=None):
         start_idx = inflection_points[0]
         dy_region = dy[start_idx:]
         E_region = E_filtered[start_idx:-1]
-        dy_percentile = np.percentile(dy_region, 50)
+        dy_percentile = np.percentile(dy_region, 40)
         linear_region = np.where(dy_region > dy_percentile)[0]
         if len(linear_region) > 0:
             start_idx = start_idx + linear_region[0]
-            end_idx = start_idx + linear_region[-1] + 1
+            end_idx = start_idx + len(linear_region) // 2
         else:
             end_idx = start_idx + len(dy_region) // 2
     else:
@@ -194,19 +194,22 @@ def plot_tauc(E, F_R, transition_type='direct', material=None):
     plt.figure(figsize=(8, 6), facecolor='#fafafa')
     plt.plot(E_filtered, y_filtered, color='#333333', label='Data Tauc Plot')
     
-    # Plot garis tangensial
-    x_fit = np.array([min(E_linear), band_gap])
+    # Perpanjang garis tangensial
+    # Tentukan rentang energi untuk garis tangensial (dari e_min hingga energi maksimum di daerah linier)
+    x_fit = np.array([e_min, max(E_linear) + 0.5])  # Perpanjang hingga lebih jauh dari titik potong
     y_fit = slope * x_fit + intercept
     plt.plot(x_fit, y_fit, 'r--', label=f'Garis Tangensial (E_g = {band_gap:.2f} eV)', linewidth=2)
     
-    # Plot titik potong
-    plt.axvline(x=band_gap, color='green', linestyle=':', label=f'Energi Band Gap: {band_gap:.2f} eV', alpha=0.7)
+    # Plot garis vertikal energi band gap yang lebih panjang
+    y_min, y_max = min(y_filtered), max(y_filtered)
+    plt.vlines(x=band_gap, ymin=y_min, ymax=y_max, color='green', linestyle=':', 
+               label=f'Energi Band Gap: {band_gap:.2f} eV', alpha=0.7, linewidth=2)
     plt.axhline(y=0, color='black', linestyle='-', alpha=0.3)
 
     # Tambahkan anotasi
     plt.annotate(f'E_g = {band_gap:.2f} eV', 
                  xy=(band_gap, 0), 
-                 xytext=(band_gap + 0.2, max(y_filtered) * 0.1),
+                 xytext=(band_gap + 0.2, y_max * 0.1),
                  arrowprops=dict(facecolor='black', shrink=0.05, width=1, headwidth=5),
                  fontsize=10, fontfamily='Segoe UI')
 
