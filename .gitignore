@@ -35,3 +35,6 @@ Thumbs.db
 
 # Ignore .exe
 *.exe
+
+# Ignore datasampel
+datasampel/
