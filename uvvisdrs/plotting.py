@@ -47,7 +47,7 @@ def plot_kubelka_munk(E, F_R, smoothed=False):
     plt.show()
 
 def calculate_band_gap(E, F_R, transition_type='direct', material=None):
-    """Menghitung energi band gap tanpa menampilkan plot."""
+    """Menghitung energi band gap berdasarkan puncak F(R) dan penurunan tajam jika ada."""
     if transition_type == 'direct':
         y = (F_R * E)**2
         exponent = 2
@@ -60,6 +60,7 @@ def calculate_band_gap(E, F_R, transition_type='direct', material=None):
     # Urutkan data berdasarkan energi (E)
     sorted_indices = np.argsort(E)
     E_sorted = E[sorted_indices]
+    F_R_sorted = F_R[sorted_indices]
     y_sorted = y[sorted_indices]
 
     # Tentukan rentang energi berdasarkan material
@@ -70,48 +71,63 @@ def calculate_band_gap(E, F_R, transition_type='direct', material=None):
 
     mask = (E_sorted >= e_min) & (E_sorted <= e_max)
     E_filtered = E_sorted[mask]
+    F_R_filtered = F_R_sorted[mask]
     y_filtered = y_sorted[mask]
 
     if len(E_filtered) < 10:
         raise ValueError(f"Data dalam rentang energi {e_min}–{e_max} eV terlalu sedikit untuk analisis")
 
-    # Hitung turunan pertama dan kedua
-    dy = np.diff(y_filtered) / np.diff(E_filtered)
-    d2y = np.diff(dy) / np.diff(E_filtered[:-1])
-    E_diff = (E_filtered[:-2] + E_filtered[2:]) / 2
+    # Hitung turunan pertama F(R) untuk menemukan puncak
+    dF_R = np.diff(F_R_filtered) / np.diff(E_filtered)
+    E_diff = (E_filtered[:-1] + E_filtered[1:]) / 2
 
-    # Cari titik infleksi (d2y mendekati nol)
-    inflection_points = np.where(np.abs(d2y) < np.percentile(np.abs(d2y), 20))[0]
-    
-    if len(inflection_points) > 0:
-        start_idx = inflection_points[0]
-        dy_region = dy[start_idx:]
-        E_region = E_filtered[start_idx:-1]
-        # Sesuaikan persentil untuk fokus pada daerah linier yang lebih tepat (dekat 2.30 eV)
-        dy_percentile = np.percentile(dy_region, 40)  # Turunkan persentil untuk menangkap daerah linier lebih awal
-        linear_region = np.where(dy_region > dy_percentile)[0]
-        if len(linear_region) > 0:
-            start_idx = start_idx + linear_region[0]
-            # Perluas daerah linier untuk fitting yang lebih akurat
-            end_idx = start_idx + len(linear_region) // 2
-        else:
-            end_idx = start_idx + len(dy_region) // 2
+    # Cari titik puncak (di mana F(R) maksimum)
+    peak_idx = np.argmax(F_R_filtered)
+
+    # Ambil turunan setelah puncak
+    if peak_idx < len(dF_R):  # Pastikan ada data setelah puncak
+        dF_R_after_peak = dF_R[peak_idx:]
+        E_after_peak = E_diff[peak_idx:]
     else:
-        mid_idx = len(E_filtered) // 2
-        start_idx = mid_idx - len(E_filtered) // 8
-        end_idx = mid_idx + len(E_filtered) // 8
+        # Jika puncak berada di ujung data, gunakan daerah sebelum puncak sebagai fallback
+        dF_R_after_peak = dF_R[max(0, peak_idx - 10):peak_idx]
+        E_after_peak = E_diff[max(0, peak_idx - 10):peak_idx]
+        peak_idx = max(0, peak_idx - 10)
+
+    # Cari daerah penurunan tajam (turunan negatif besar)
+    negative_dF_R = dF_R_after_peak[dF_R_after_peak < 0]
+    if len(negative_dF_R) > 0:
+        dF_R_threshold = np.percentile(negative_dF_R, 10)  # 10% turunan negatif terbesar
+        sharp_decline_indices = np.where(dF_R_after_peak <= dF_R_threshold)[0]
+        if len(sharp_decline_indices) > 0:
+            start_idx = peak_idx + sharp_decline_indices[0]
+            start_idx = max(0, start_idx - 5)
+            end_idx = min(len(E_filtered) - 1, start_idx + 20)
+        else:
+            # Jika tidak ada penurunan tajam, gunakan daerah setelah puncak
+            start_idx = peak_idx
+            end_idx = min(len(E_filtered) - 1, peak_idx + 20)
+    else:
+        # Jika tidak ada turunan negatif, gunakan daerah setelah puncak sebagai fallback
+        start_idx = peak_idx
+        end_idx = min(len(E_filtered) - 1, peak_idx + 20)
+
+    if end_idx - start_idx < 2:
+        # Jika daerah linier terlalu pendek, perluas secara default
+        start_idx = max(0, peak_idx - 10)
+        end_idx = min(len(E_filtered) - 1, peak_idx + 10)
 
     if end_idx - start_idx < 2:
         raise ValueError("Tidak dapat menemukan daerah linier yang cukup untuk fitting")
 
-    # Ambil rentang data linier
+    # Ambil rentang data linier pada kurva Tauc
     E_linear = E_filtered[start_idx:end_idx + 1]
     y_linear = y_filtered[start_idx:end_idx + 1]
 
     # Lakukan linear fitting
     slope, intercept, _, _, _ = linregress(E_linear, y_linear)
     
-    # Hitung titik potong
+    # Hitung titik potong dengan sumbu x
     band_gap = -intercept / slope
 
     # Validasi band gap
@@ -121,7 +137,7 @@ def calculate_band_gap(E, F_R, transition_type='direct', material=None):
     return band_gap
 
 def plot_tauc(E, F_R, transition_type='direct', material=None):
-    """Memplot Tauc plot berdasarkan tipe transisi dan menghitung energi band gap."""
+    """Memplot Tauc plot dengan kurva Kubelka-Munk sebagai latar belakang."""
     if transition_type == 'direct':
         y = (F_R * E)**2
         exponent = 2
@@ -134,6 +150,7 @@ def plot_tauc(E, F_R, transition_type='direct', material=None):
     # Urutkan data berdasarkan energi (E)
     sorted_indices = np.argsort(E)
     E_sorted = E[sorted_indices]
+    F_R_sorted = F_R[sorted_indices]
     y_sorted = y[sorted_indices]
 
     # Tentukan rentang energi berdasarkan material
@@ -144,34 +161,47 @@ def plot_tauc(E, F_R, transition_type='direct', material=None):
 
     mask = (E_sorted >= e_min) & (E_sorted <= e_max)
     E_filtered = E_sorted[mask]
+    F_R_filtered = F_R_sorted[mask]
     y_filtered = y_sorted[mask]
 
     if len(E_filtered) < 10:
         raise ValueError(f"Data dalam rentang energi {e_min}–{e_max} eV terlalu sedikit untuk analisis")
 
-    # Hitung turunan pertama dan kedua
-    dy = np.diff(y_filtered) / np.diff(E_filtered)
-    d2y = np.diff(dy) / np.diff(E_filtered[:-1])
-    E_diff = (E_filtered[:-2] + E_filtered[2:]) / 2
+    # Hitung turunan pertama F(R)
+    dF_R = np.diff(F_R_filtered) / np.diff(E_filtered)
+    E_diff = (E_filtered[:-1] + E_filtered[1:]) / 2
 
-    # Cari titik infleksi
-    inflection_points = np.where(np.abs(d2y) < np.percentile(np.abs(d2y), 20))[0]
-    
-    if len(inflection_points) > 0:
-        start_idx = inflection_points[0]
-        dy_region = dy[start_idx:]
-        E_region = E_filtered[start_idx:-1]
-        dy_percentile = np.percentile(dy_region, 40)
-        linear_region = np.where(dy_region > dy_percentile)[0]
-        if len(linear_region) > 0:
-            start_idx = start_idx + linear_region[0]
-            end_idx = start_idx + len(linear_region) // 2
-        else:
-            end_idx = start_idx + len(dy_region) // 2
+    # Cari titik puncak
+    peak_idx = np.argmax(F_R_filtered)
+
+    # Ambil turunan setelah puncak
+    if peak_idx < len(dF_R):
+        dF_R_after_peak = dF_R[peak_idx:]
+        E_after_peak = E_diff[peak_idx:]
     else:
-        mid_idx = len(E_filtered) // 2
-        start_idx = mid_idx - len(E_filtered) // 8
-        end_idx = mid_idx + len(E_filtered) // 8
+        dF_R_after_peak = dF_R[max(0, peak_idx - 10):peak_idx]
+        E_after_peak = E_diff[max(0, peak_idx - 10):peak_idx]
+        peak_idx = max(0, peak_idx - 10)
+
+    # Cari daerah penurunan tajam
+    negative_dF_R = dF_R_after_peak[dF_R_after_peak < 0]
+    if len(negative_dF_R) > 0:
+        dF_R_threshold = np.percentile(negative_dF_R, 10)
+        sharp_decline_indices = np.where(dF_R_after_peak <= dF_R_threshold)[0]
+        if len(sharp_decline_indices) > 0:
+            start_idx = peak_idx + sharp_decline_indices[0]
+            start_idx = max(0, start_idx - 5)
+            end_idx = min(len(E_filtered) - 1, start_idx + 20)
+        else:
+            start_idx = peak_idx
+            end_idx = min(len(E_filtered) - 1, peak_idx + 20)
+    else:
+        start_idx = peak_idx
+        end_idx = min(len(E_filtered) - 1, peak_idx + 20)
+
+    if end_idx - start_idx < 2:
+        start_idx = max(0, peak_idx - 10)
+        end_idx = min(len(E_filtered) - 1, peak_idx + 10)
 
     if end_idx - start_idx < 2:
         raise ValueError("Tidak dapat menemukan daerah linier yang cukup untuk fitting")
@@ -190,35 +220,49 @@ def plot_tauc(E, F_R, transition_type='direct', material=None):
     if not e_min <= band_gap <= e_max:
         raise ValueError(f"Nilai band gap ({band_gap:.2f} eV) di luar rentang yang diharapkan ({e_min}–{e_max} eV)")
 
-    # Plot Tauc plot
-    plt.figure(figsize=(8, 6), facecolor='#fafafa')
-    plt.plot(E_filtered, y_filtered, color='#333333', label='Data Tauc Plot')
-    
-    # Perpanjang garis tangensial
-    # Tentukan rentang energi untuk garis tangensial (dari e_min hingga energi maksimum di daerah linier)
-    x_fit = np.array([e_min, max(E_linear) + 0.5])  # Perpanjang hingga lebih jauh dari titik potong
+    # Plot Tauc dengan kurva Kubelka-Munk
+    fig, ax1 = plt.subplots(figsize=(8, 6), facecolor='#fafafa')
+
+    # Sumbu y kiri untuk Tauc plot
+    ax1.plot(E_filtered, y_filtered, color='#333333', label='Data Tauc Plot')
+    ax1.set_xlabel('Energi (eV)', fontfamily='Segoe UI', fontsize=12)
+    ax1.set_ylabel(f'(F(R) E)^{exponent}', fontfamily='Segoe UI', fontsize=12, color='#333333')
+    ax1.tick_params(axis='y', labelcolor='#333333')
+
+    # Sumbu y kanan untuk F(R)
+    ax2 = ax1.twinx()
+    ax2.plot(E_filtered, F_R_filtered, color='blue', linestyle='--', alpha=0.5, label='F(R) (Kubelka-Munk)')
+    ax2.set_ylabel('F(R)', fontfamily='Segoe UI', fontsize=12, color='blue')
+    ax2.tick_params(axis='y', labelcolor='blue')
+
+    # Plot garis tangensial
+    x_fit = np.array([e_min, max(E_linear) + 0.5])
     y_fit = slope * x_fit + intercept
-    plt.plot(x_fit, y_fit, 'r--', label=f'Garis Tangensial (E_g = {band_gap:.2f} eV)', linewidth=2)
-    
-    # Plot garis vertikal energi band gap yang lebih panjang
+    ax1.plot(x_fit, y_fit, 'r--', label=f'Garis Tangensial (E_g = {band_gap:.2f} eV)', linewidth=2)
+
+    # Plot garis vertikal energi band gap
     y_min, y_max = min(y_filtered), max(y_filtered)
-    plt.vlines(x=band_gap, ymin=y_min, ymax=y_max, color='green', linestyle=':', 
+    ax1.vlines(x=band_gap, ymin=y_min, ymax=y_max, color='green', linestyle=':', 
                label=f'Energi Band Gap: {band_gap:.2f} eV', alpha=0.7, linewidth=2)
-    plt.axhline(y=0, color='black', linestyle='-', alpha=0.3)
+    ax1.axhline(y=0, color='black', linestyle='-', alpha=0.3)
 
     # Tambahkan anotasi
-    plt.annotate(f'E_g = {band_gap:.2f} eV', 
+    ax1.annotate(f'E_g = {band_gap:.2f} eV', 
                  xy=(band_gap, 0), 
                  xytext=(band_gap + 0.2, y_max * 0.1),
                  arrowprops=dict(facecolor='black', shrink=0.05, width=1, headwidth=5),
                  fontsize=10, fontfamily='Segoe UI')
 
-    plt.xlabel('Energi (eV)', fontfamily='Segoe UI', fontsize=12)
-    plt.ylabel(f'(F(R) E)^{exponent}', fontfamily='Segoe UI', fontsize=12)
+    # Tambahkan judul dan grid
     plt.title(f'Tauc Plot (Transisi {transition_type})', fontfamily='Segoe UI', fontsize=14)
-    plt.grid(True, linestyle='--', alpha=0.7)
-    plt.legend()
-    plt.gca().set_facecolor('#fafafa')
+    ax1.grid(True, linestyle='--', alpha=0.7)
+    ax1.set_facecolor('#fafafa')
+
+    # Gabungkan legenda dari kedua sumbu
+    lines1, labels1 = ax1.get_legend_handles_labels()
+    lines2, labels2 = ax2.get_legend_handles_labels()
+    ax1.legend(lines1 + lines2, labels1 + labels2, loc='best')
+
     plt.show()
 
     return band_gap
