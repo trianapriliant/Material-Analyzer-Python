@@ -3,6 +3,7 @@ from tkinter import ttk, font, PhotoImage
 from uvvis.gui import UVVisGUI
 from sem.gui import SEMGUI
 from uvvisdrs.gui import UVVisDRSWindow  # Impor modul UV-Vis DRS
+from ftir.gui import FtirWindow
 
 class UIMainApp:
     def __init__(self, root):
@@ -97,7 +98,8 @@ class UIMainApp:
 
     def open_ftir(self):
         """Buka modul FTIR"""
-        # Implementasi modul FTIR di sini
+        ftir_window = tk.Toplevel(self.root)
+        FtirWindow(ftir_window) #connecting to ftir gui
         pass
 
     def open_sem(self):
