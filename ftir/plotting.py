@@ -32,13 +32,20 @@ def plot_spectrum(ax, data, peaks, plot_name, show_legend=True, show_peaks=True,
     # Gunakan custom_functional_groups jika ada, jika tidak gunakan identify_functional_groups
     functional_groups = custom_functional_groups if custom_functional_groups is not None else identify_functional_groups(data, peaks)
     
+    # Debugging: Pastikan functional_groups berisi data
+    if not functional_groups:
+        print("Warning: functional_groups is empty. No functional groups to display.")
+    
     # Kelompokkan gugus fungsi berdasarkan wavenumber
     grouped_groups = {}
     for fg in functional_groups:
         wavenumber = fg['wavenumber']
+        group = fg['group']
         if wavenumber not in grouped_groups:
             grouped_groups[wavenumber] = []
         grouped_groups[wavenumber].append(fg)
+        # Debugging: Log setiap gugus yang diterima
+        print(f"Received functional group: {wavenumber} cm⁻¹: {group}")
     
     # Urutkan puncak berdasarkan wavenumber untuk menangani tumpang tindih
     peak_info = [(data['wavenumber'].iloc[peak], peak) for peak in peaks]
@@ -58,51 +65,56 @@ def plot_spectrum(ax, data, peaks, plot_name, show_legend=True, show_peaks=True,
     
     # Tandai puncak dengan garis pendek dan label gabungan jika diaktifkan
     label_positions = []  # Simpan posisi label untuk mendeteksi tumpang tindih
-    if show_peaks or show_groups:
-        for wavenumber, peak in peak_info:
-            # Ambil posisi dasar di bawah garis
-            y_start = base_y_positions[wavenumber]
-            y_end = y_start + line_length  # Panjang garis pendek
+    for wavenumber, peak in peak_info:
+        # Ambil posisi dasar di bawah garis
+        y_start = base_y_positions[wavenumber]
+        y_end = y_start + line_length  # Panjang garis pendek
+        
+        # Gambar garis pendek di bawah garis spektrum jika show_peaks aktif
+        if show_peaks:
+            ax.plot([wavenumber, wavenumber], [y_start, y_end], color='black', linestyle='-', alpha=0.5)
+        
+        # Tentukan posisi label
+        label_y_position = y_end + label_offset
+        label_x_position = wavenumber
+        
+        # Cek tumpang tindih dengan label sebelumnya
+        label_width = 50  # Perkiraan lebar label dalam satuan wavenumber
+        overlap = True
+        offset_idx = 0
+        while overlap:
+            overlap = False
+            for prev_x, prev_idx in label_positions:
+                if abs(label_x_position - prev_x) < label_width:
+                    # Jika tumpang tindih, geser ke samping (ke kiri, karena sumbu x terbalik)
+                    offset_idx += 1
+                    label_x_position = wavenumber - offset_idx * label_width
+                    overlap = True
+                    break
+        
+        # Buat label gabungan (wavenumber dan gugus fungsi)
+        if show_peaks:
+            label_text = f"{int(wavenumber)} cm⁻¹"
+            if show_groups:
+                # Cari gugus untuk wavenumber ini
+                matching_groups = grouped_groups.get(wavenumber, [])
+                if matching_groups:
+                    dominant_group = matching_groups[0]['group']  # Ambil gugus pertama
+                    if dominant_group:
+                        label_text = f"{int(wavenumber)} cm⁻¹: {dominant_group}"
+                    else:
+                        print(f"Warning: No group name for wavenumber {wavenumber}")
+                else:
+                    print(f"Warning: No functional group found for wavenumber {wavenumber}")
             
-            # Gambar garis pendek di bawah garis spektrum jika show_peaks aktif
-            if show_peaks:
-                ax.plot([wavenumber, wavenumber], [y_start, y_end], color='black', linestyle='-', alpha=0.5)
-            
-            # Tentukan posisi label
-            label_y_position = y_end + label_offset
-            label_x_position = wavenumber
-            
-            # Cek tumpang tindih dengan label sebelumnya
-            label_width = 50  # Perkiraan lebar label dalam satuan wavenumber
-            overlap = True
-            offset_idx = 0
-            while overlap:
-                overlap = False
-                for prev_x, prev_idx in label_positions:
-                    if abs(label_x_position - prev_x) < label_width:
-                        # Jika tumpang tindih, geser ke samping (ke kiri, karena sumbu x terbalik)
-                        offset_idx += 1
-                        label_x_position = wavenumber - offset_idx * label_width
-                        overlap = True
-                        break
-            
-            # Buat label gabungan (wavenumber dan gugus fungsi)
-            if show_peaks:
-                label_text = f"{int(wavenumber)} cm⁻¹"
-                if show_groups:
-                    # Cari gugus untuk wavenumber ini
-                    matching_groups = grouped_groups.get(wavenumber, [])
-                    if matching_groups:
-                        dominant_group = matching_groups[0]['group']  # Ambil gugus pertama
-                        if dominant_group:
-                            label_text = f"{int(wavenumber)} cm⁻¹: {dominant_group}"
-                
-                # Tampilkan label gabungan secara vertikal
-                ax.text(label_x_position, label_y_position, label_text, rotation=270, fontsize=8, color='black',
-                        verticalalignment='top', horizontalalignment='center')
-            
-            # Simpan posisi label untuk pemeriksaan tumpang tindih berikutnya
-            label_positions.append((label_x_position, peak))
+            # Tampilkan label gabungan secara vertikal
+            ax.text(label_x_position, label_y_position, label_text, rotation=270, fontsize=8, color='black',
+                    verticalalignment='top', horizontalalignment='center')
+            # Debugging: Log label yang ditampilkan
+            print(f"Displaying label: {label_text} at position ({label_x_position}, {label_y_position})")
+        
+        # Simpan posisi label untuk pemeriksaan tumpang tindih berikutnya
+        label_positions.append((label_x_position, peak))
     
     # Atur rentang sumbu y dari 10 hingga maksimum
     y_min = 10

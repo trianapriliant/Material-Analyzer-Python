@@ -163,7 +163,7 @@ class FtirWindow:
             messagebox.showerror("Error", f"Terjadi kesalahan saat koreksi baseline: {str(e)}")
         
     def identify_peaks(self):
-        """Mengidentifikasi puncak pada data yang dikoreksi"""
+        """Mengidentifikasi puncak pada data yang dikoreksi dan memperbarui tabel"""
         if self.corrected_data is None:
             messagebox.showwarning("Peringatan", "Silakan lakukan koreksi baseline terlebih dahulu")
             return
@@ -187,7 +187,8 @@ class FtirWindow:
             # Buat checkbox untuk setiap gugus fungsional
             self.create_group_checkboxes()
             
-            self.update_table()
+            # Perbarui tabel tanpa memperbarui plot
+            self.update_table(update_plot=False)
             messagebox.showinfo("Info", f"{len(self.peaks)} puncak diidentifikasi")
         except Exception as e:
             messagebox.showerror("Error", f"Terjadi kesalahan saat identifikasi puncak: {str(e)}")
@@ -267,8 +268,8 @@ class FtirWindow:
                 filtered_groups.append({"wavenumber": wavenumber, "group": group})
         return filtered_groups
     
-    def update_table(self):
-        """Perbarui tabel berdasarkan mode identifikasi gugus dan perbarui plot"""
+    def update_table(self, update_plot=True):
+        """Perbarui tabel berdasarkan mode identifikasi gugus"""
         # Kosongkan tabel
         for item in self.table.get_children():
             self.table.delete(item)
@@ -302,8 +303,9 @@ class FtirWindow:
         # Perbarui checkbox gugus fungsional
         self.create_group_checkboxes()
         
-        # Perbarui plot setelah tabel diperbarui
-        self.update_plot()
+        # Perbarui plot hanya jika diminta
+        if update_plot:
+            self.update_plot()
     
     def edit_table_cell(self, event):
         """Edit gugus fungsi di tabel secara manual dan perbarui plot"""
